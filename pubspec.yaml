@@ -1,0 +1,40 @@
+name: web_gestor_site_covertix
+description: "Gestor web Covertix."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  muller_package:
+    path: ../muller_package
+
+  flutter:
+    sdk: flutter
+
+  bloc: ^8.1.4
+  flutter_bloc: ^8.1.6
+  shared_preferences: ^2.2.3
+  http: ^1.6.0
+  http_parser: ^4.1.2
+  image_picker: ^1.2.1
+
+  url_launcher: ^6.3.1
+
+  cupertino_icons: ^1.0.8
+  flutter_map: ^8.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/logo_texto_fundo_transparente.png
+    - assets/json/
