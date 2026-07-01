@@ -1,6 +1,6 @@
 {
-    "name": "web_gestor_site_covertix",
-    "short_name": "web_gestor_site_covertix",
+    "name": "Convertix - Gestor Web",
+    "short_name": "Convertix",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

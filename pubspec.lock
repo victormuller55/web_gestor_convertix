@@ -483,11 +483,9 @@ packages:
   muller_package:
     dependency: "direct main"
     description:
-      path: "."
-      ref: main
-      resolved-ref: a5cc9e684c848f37003b6bb48485558d19071e4f
-      url: "https://github.com/victormuller55/muller_package.git"
-    source: git
+      path: "../muller_package"
+      relative: true
+    source: path
     version: "0.0.1"
   nested:
     dependency: transitive

@@ -10,6 +10,7 @@ class AppWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Convertix - Gestor Web',
       navigatorKey: AppContext.navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
