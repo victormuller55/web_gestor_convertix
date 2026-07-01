@@ -8,8 +8,11 @@ environment:
   sdk: ^3.11.5
 
 dependencies:
+
   muller_package:
-    path: ../muller_package
+    git:
+      url: https://github.com/victormuller55/muller_package.git
+      ref: main
 
   flutter:
     sdk: flutter
