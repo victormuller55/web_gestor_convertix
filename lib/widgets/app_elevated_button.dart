@@ -30,7 +30,7 @@ Widget appElevatedButtonCovertix({
         onExit: (_) => setState(() => hover = false),
         child: Padding(
           padding: EdgeInsets.only(top: padding ?? 0),
-          child: _elevatedButtonContent(
+          child: _animatedElevatedButton(
             hover: hover,
             primary: primary,
             invertedStyle: invertedStyle,
@@ -66,7 +66,7 @@ Widget appElevatedButtonCovertixTransparent({
   );
 }
 
-Widget _elevatedButtonContent({
+Widget _animatedElevatedButton({
   required bool hover,
   required bool primary,
   required bool invertedStyle,
@@ -77,112 +77,82 @@ Widget _elevatedButtonContent({
   required double borderRadius,
   required double textSize,
 }) {
-  final outline = _elevatedOutlineButton(
-    label: label,
-    onTap: onTap,
-    buttonHeight: buttonHeight,
-    buttonWidth: buttonWidth,
-    borderRadius: borderRadius,
-    textSize: textSize,
-  );
-  final filled = primary
-      ? _elevatedPrimaryButton(
-          label: label,
-          onTap: onTap,
-          buttonHeight: buttonHeight,
-          buttonWidth: buttonWidth,
-          borderRadius: borderRadius,
-          textSize: textSize,
-        )
-      : _elevatedSecondaryButton(
-          label: label,
-          onTap: onTap,
-          buttonHeight: buttonHeight,
-          buttonWidth: buttonWidth,
-          borderRadius: borderRadius,
-          textSize: textSize,
-        );
+  final isOutline = invertedStyle ? hover : !hover;
+  final colors = _resolveElevatedButtonColors(primary: primary, isOutline: isOutline);
 
-  if (invertedStyle) return hover ? filled : outline;
-  return hover ? outline : filled;
-}
-
-Widget _elevatedOutlineButton({
-  required String label,
-  required void Function() onTap,
-  required double buttonHeight,
-  required double buttonWidth,
-  required double borderRadius,
-  required double textSize,
-}) {
-  return Material(
-    color: AppColors.white,
-    borderRadius: BorderRadius.circular(borderRadius),
-    child: InkWell(
-      onTap: onTap,
+  return AnimatedContainer(
+    duration: AppTheme.buttonHoverDuration,
+    curve: Curves.easeInOut,
+    height: buttonHeight,
+    width: buttonWidth,
+    decoration: BoxDecoration(
+      color: colors.backgroundColor,
       borderRadius: BorderRadius.circular(borderRadius),
-      child: Container(
-        height: buttonHeight,
-        width: buttonWidth,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(borderRadius),
-          border: Border.all(
-            color: local.ConvertixColors.buttonPrimary,
-            width: AppTheme.buttonBorderWidthHover,
+      border: Border.all(
+        color: colors.borderColor,
+        width: colors.borderWidth,
+      ),
+    ),
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: Center(
+          child: AnimatedDefaultTextStyle(
+            duration: AppTheme.buttonHoverDuration,
+            curve: Curves.easeInOut,
+            style: TextStyle(
+              color: colors.textColor,
+              fontWeight: FontWeight.bold,
+              fontSize: textSize,
+              letterSpacing: 1,
+              fontFamily: 'lato',
+            ),
+            child: Text(label),
           ),
-        ),
-        child: appText(
-          label,
-          color: local.ConvertixColors.buttonPrimary,
-          bold: true,
-          fontSize: textSize,
-          letterSpacing: 1,
         ),
       ),
     ),
   );
 }
 
-Widget _elevatedPrimaryButton({
-  required String label,
-  required void Function() onTap,
-  required double buttonHeight,
-  required double buttonWidth,
-  required double borderRadius,
-  required double textSize,
+({Color backgroundColor, Color textColor, Color borderColor, double borderWidth})
+    _resolveElevatedButtonColors({
+  required bool primary,
+  required bool isOutline,
 }) {
-  return appElevatedButtonText(
-    label,
-    function: onTap,
-    fontSize: textSize,
-    height: buttonHeight,
-    width: buttonWidth,
-    color: local.ConvertixColors.buttonPrimary,
-    textColor: AppColors.white,
-    borderColor: local.ConvertixColors.buttonPrimary,
-    borderRadius: borderRadius,
-    borderWidth: 0,
-  );
-}
+  if (primary) {
+    if (isOutline) {
+      return (
+        backgroundColor: AppColors.white,
+        textColor: local.ConvertixColors.buttonPrimary,
+        borderColor: local.ConvertixColors.buttonPrimary,
+        borderWidth: AppTheme.buttonBorderWidthHover,
+      );
+    }
 
-Widget _elevatedSecondaryButton({
-  required String label,
-  required void Function() onTap,
-  required double buttonHeight,
-  required double buttonWidth,
-  required double borderRadius,
-  required double textSize,
-}) {
-  return appElevatedButtonText(
-    label,
-    function: onTap,
-    fontSize: textSize,
-    height: buttonHeight,
-    width: buttonWidth,
-    color: AppColors.white,
+    return (
+      backgroundColor: local.ConvertixColors.buttonPrimary,
+      textColor: AppColors.white,
+      borderColor: local.ConvertixColors.buttonPrimary,
+      borderWidth: 0,
+    );
+  }
+
+  if (isOutline) {
+    return (
+      backgroundColor: AppColors.white,
+      textColor: local.ConvertixColors.buttonPrimary,
+      borderColor: local.ConvertixColors.buttonPrimary,
+      borderWidth: AppTheme.buttonBorderWidthHover,
+    );
+  }
+
+  return (
+    backgroundColor: AppColors.white,
     textColor: local.ConvertixColors.textPrimary,
     borderColor: local.ConvertixColors.border,
-    borderRadius: borderRadius,
+    borderWidth: AppTheme.inputBorderWidth,
   );
 }

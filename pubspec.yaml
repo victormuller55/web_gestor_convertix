@@ -40,4 +40,4 @@ flutter:
 
   assets:
     - assets/images/logo_texto_fundo_transparente.png
-    - assets/json/
+    - assets/images/background.png

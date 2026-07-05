@@ -9,6 +9,7 @@ import 'package:web_gestor_site_covertix/models/app_enums.dart';
 import 'package:web_gestor_site_covertix/models/usuario_model.dart';
 import 'package:web_gestor_site_covertix/pages/login_page/entrar_page.dart';
 import 'package:web_gestor_site_covertix/pages/perfil/perfil_page.dart';
+import 'package:web_gestor_site_covertix/widgets/app_confirm_dialog.dart';
 import 'package:web_gestor_site_covertix/widgets/app_logo.dart';
 
 const double _menuBreakpoint = 900;
@@ -366,6 +367,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _exitAccount() async {
+    final confirmado = await showAppConfirmDialog(
+      context,
+      title: 'Sair da conta',
+      message: 'Deseja realmente sair da sua conta?',
+      icon: Icons.logout_rounded,
+      confirmLabel: 'Sair',
+      destructive: true,
+    );
+    if (confirmado != true || !mounted) return;
+
     await clearToken();
     open(screen: const LoginPage(), closePrevious: true);
   }

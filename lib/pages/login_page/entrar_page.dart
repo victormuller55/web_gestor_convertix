@@ -10,6 +10,7 @@ import 'package:web_gestor_site_covertix/pages/login_page/entrar_event.dart';
 import 'package:web_gestor_site_covertix/pages/login_page/entrar_state.dart';
 import 'package:web_gestor_site_covertix/widgets/app_elevated_button.dart';
 import 'package:web_gestor_site_covertix/widgets/app_logo.dart';
+import 'package:web_gestor_site_covertix/widgets/login/login_screen_decoration.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -39,6 +40,7 @@ class _LoginPageState extends State<LoginPage> {
       width: 360,
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
+      hoverBorderColor: ConvertixColors.primary,
       icon: const Icon(Icons.email_outlined, color: ConvertixColors.textMuted),
       backgroundColor: ConvertixColors.surface,
       hintColor: ConvertixColors.textMuted,
@@ -52,6 +54,7 @@ class _LoginPageState extends State<LoginPage> {
       width: 360,
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
+      hoverBorderColor: ConvertixColors.primary,
       icon: const Icon(Icons.lock_outline, color: ConvertixColors.textMuted),
       backgroundColor: ConvertixColors.surface,
       hintColor: ConvertixColors.textMuted,
@@ -151,20 +154,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _loginCard() {
-    return appContainer(
-      constraints: const BoxConstraints(maxWidth: 440),
-      width: double.infinity,
-      backgroundColor: ConvertixColors.surface,
-      radius: BorderRadius.circular(AppTheme.radiusCard + 4),
-      border: Border.all(color: AppColors.white.withValues(alpha: 0.65), width: 1.5),
-      shadow: BoxShadow(
-        color: AppColors.grey900.withValues(alpha: 0.22),
-        blurRadius: 48,
-        offset: const Offset(0, 20),
-      ),
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.giant, vertical: AppSpacing.giant),
-      child: _bodyBuilder(),
-    );
+    return LoginGlassCard(child: _bodyBuilder());
   }
 
   Widget _loading() {
@@ -189,14 +179,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _loginBackground({required Widget child}) {
-    return appContainer(
-      width: double.infinity,
-      height: double.infinity,
-      gradient: ConvertixColors.loginPanelGradient,
-      child: Center(
-        child: SingleChildScrollView(padding: EdgeInsets.all(AppSpacing.medium), child: child),
-      ),
-    );
+    return LoginScreenBackground(child: child);
   }
 
   @override

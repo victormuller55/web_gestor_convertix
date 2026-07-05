@@ -78,6 +78,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
       dense: true,
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
+      hoverBorderColor: ConvertixColors.primary,
       backgroundColor: AppColors.grey100,
       icon: const Icon(Icons.search, color: ConvertixColors.primary),
       hint: AppStrings.digiteAlgoParaPesquisar,

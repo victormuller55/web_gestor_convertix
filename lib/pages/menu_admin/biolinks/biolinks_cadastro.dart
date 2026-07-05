@@ -118,6 +118,7 @@ class _BiolinksCadastroState extends State<BiolinksCadastro> {
       dense: true,
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
+      hoverBorderColor: ConvertixColors.primary,
       backgroundColor: AppColors.grey100,
       icon: Icon(icon, color: ConvertixColors.primary),
       hint: hint,

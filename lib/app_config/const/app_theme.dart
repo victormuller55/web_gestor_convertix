@@ -10,6 +10,7 @@ class AppTheme {
   static const double inputBorderWidth = 1;
   static const double inputBorderWidthActive = 1.7;
   static const double buttonBorderWidthHover = 2;
+  static const Duration buttonHoverDuration = Duration(milliseconds: 200);
 
   static const double fontSize = 13;
   static const EdgeInsets dialogHeaderPadding = EdgeInsets.symmetric(horizontal: 14, vertical: 8);

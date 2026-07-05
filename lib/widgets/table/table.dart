@@ -128,7 +128,9 @@ Widget _tableBody({
     child: LayoutBuilder(
       builder: (context, constraints) {
         final tableWidth = constraints.maxWidth;
-        final isScrollable = headers.length > tableScrollColumnThreshold;
+        final screenWidth = MediaQuery.sizeOf(context).width;
+        final isScrollable = screenWidth < tableScrollBreakpoint ||
+            headers.length > tableScrollColumnThreshold;
 
         return TableBreakpointScope(
           tableWidth: tableWidth,

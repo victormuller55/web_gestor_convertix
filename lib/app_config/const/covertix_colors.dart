@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
 class ConvertixColors {
+
   static const Color white = Color(0xFFFFFFFF);
-  static const Color primary = Color(0xFF16A34A);
-  static const Color primaryDark = Color(0xFF15803D);
-  static const Color primaryDarker = Color(0xFF0D4C24);
-  static const Color buttonPrimary = primaryDarker;
-  static const Color sidebarBackground = Color(0xFF0A3520);
-  static const Color primaryLight = Color(0xFFDCFCE7);
+  static const Color primary = Color(0xFF002AFF);
+  static const Color primaryDark = Color(0xFF001DB8);
+  static const Color primaryDarker = Color(0xFF000E4B);
+  static const Color buttonPrimary = primary;
+  static const Color sidebarBackground = Color(0xFF000E4B);
+  static const Color primaryLight = Color(0xFFE6EAFF);
 
   static const Color textPrimary = Color(0xFF111827);
   static const Color textSecondary = Color(0xFF4B5563);
@@ -21,7 +22,7 @@ class ConvertixColors {
   static const Color errorBackground = Color(0xFFFEE2E2);
 
   static const LinearGradient primaryGradient = LinearGradient(
-    colors: [primary, primaryDarker],
+    colors: [primary, primaryDark],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -30,7 +31,7 @@ class ConvertixColors {
     begin: Alignment(-0.8, -1),
     end: Alignment(1.2, 1),
     colors: [
-      Color(0xFF0B3D22),
+      Color(0xFF000510),
       primaryDarker,
       primaryDark,
       primary,
@@ -43,8 +44,8 @@ class ConvertixColors {
     end: Alignment.bottomRight,
     colors: [
       surface,
-      Color(0xFFF4FBF6),
-      Color(0xFFECFDF3),
+      Color(0xFFF0F4FF),
+      Color(0xFFE6EAFF),
     ],
     stops: [0, 0.55, 1],
   );

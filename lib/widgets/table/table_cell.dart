@@ -54,17 +54,21 @@ Widget _buttonActionContainer({
   double? width,
   double? iconSize,
 }) {
-  return appContainer(
+  final baseColor = color ?? ConvertixColors.buttonPrimary;
+
+  return AnimatedContainer(
+    duration: AppTheme.buttonHoverDuration,
+    curve: Curves.easeInOut,
     height: height ?? 40,
     width: width ?? 40,
-    backgroundColor: hover ? AppColors.white : (color ?? ConvertixColors.buttonPrimary),
-    radius: BorderRadius.circular(AppTheme.radiusInput),
-    border: hover
-        ? Border.all(
-            color: ConvertixColors.buttonPrimary,
-            width: AppTheme.buttonBorderWidthHover,
-          )
-        : null,
+    decoration: BoxDecoration(
+      color: hover ? AppColors.white : baseColor,
+      borderRadius: BorderRadius.circular(AppTheme.radiusInput),
+      border: Border.all(
+        color: hover ? ConvertixColors.buttonPrimary : baseColor,
+        width: hover ? AppTheme.buttonBorderWidthHover : 0,
+      ),
+    ),
     child: Icon(
       icon,
       size: iconSize ?? 17,

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:muller_package/muller_package.dart';
 import 'package:web_gestor_site_covertix/app_config/const/app_theme.dart';
 import 'package:web_gestor_site_covertix/app_config/const/covertix_colors.dart';
-import 'package:web_gestor_site_covertix/pages/login_page/entrar_page.dart';
+import 'package:web_gestor_site_covertix/app_config/auth_gate.dart';
 
 class AppWidget extends StatelessWidget {
   const AppWidget({super.key});
@@ -52,7 +52,7 @@ class AppWidget extends StatelessWidget {
           ),
         ),
       ),
-      home: const LoginPage(),
+      home: const AuthGate(),
     );
   }
 }
