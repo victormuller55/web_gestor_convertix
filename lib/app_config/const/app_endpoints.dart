@@ -1,4 +1,4 @@
-const String server = 'http://localhost:5000';
+const String server = 'https://api.convertix.net.br';
 const String api = '$server/api/v1';
 
 String fotoUrl(String? path) {
@@ -7,7 +7,7 @@ String fotoUrl(String? path) {
   return '$server$path';
 }
 
-class AppEndpoints { 
+class AppEndpoints {
   // Auth
   static String endpointAuthLogin = '$api/auth/login';
 
