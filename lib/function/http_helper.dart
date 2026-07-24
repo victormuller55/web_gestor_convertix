@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:muller_package/muller_package.dart';
 import 'package:web_gestor_site_covertix/app_config/app_auth.dart';
 import 'package:web_gestor_site_covertix/function/api_error.dart';
+import 'package:web_gestor_site_covertix/function/api_response_meta.dart';
 
 Future<http.Response> _request(Future<http.Response> Function() call) async {
   try {
@@ -14,7 +15,11 @@ Future<http.Response> _request(Future<http.Response> Function() call) async {
       return response;
     }
     throw ApiException(
-      AppResponse(statusCode: response.statusCode, body: response.body),
+      appResponseWithHeaders(
+        statusCode: response.statusCode,
+        body: response.body,
+        headers: response.headers,
+      ),
     );
   } catch (e) {
     if (e is ApiException) rethrow;
@@ -35,7 +40,11 @@ Future<AppResponse> postJson({
   final response = await _request(
     () => http.post(uri, headers: headers, body: jsonEncode(body)),
   );
-  return AppResponse(statusCode: response.statusCode, body: utf8.decode(response.bodyBytes));
+  return appResponseWithHeaders(
+    statusCode: response.statusCode,
+    body: utf8.decode(response.bodyBytes),
+    headers: response.headers,
+  );
 }
 
 Future<AppResponse> putJson({
@@ -51,7 +60,11 @@ Future<AppResponse> putJson({
   final response = await _request(
     () => http.put(uri, headers: headers, body: jsonEncode(body)),
   );
-  return AppResponse(statusCode: response.statusCode, body: utf8.decode(response.bodyBytes));
+  return appResponseWithHeaders(
+    statusCode: response.statusCode,
+    body: utf8.decode(response.bodyBytes),
+    headers: response.headers,
+  );
 }
 
 Future<AppResponse> getJson({
@@ -64,9 +77,10 @@ Future<AppResponse> getJson({
   };
   final uri = Uri.parse(endpoint + _query(parameters));
   final response = await _request(() => http.get(uri, headers: headers));
-  return AppResponse(
+  return appResponseWithHeaders(
     statusCode: response.statusCode,
     body: utf8.decode(response.bodyBytes),
+    headers: response.headers,
   );
 }
 
@@ -83,7 +97,11 @@ Future<AppResponse> patchJson({
   final response = await _request(
     () => http.patch(uri, headers: headers, body: jsonEncode(body)),
   );
-  return AppResponse(statusCode: response.statusCode, body: utf8.decode(response.bodyBytes));
+  return appResponseWithHeaders(
+    statusCode: response.statusCode,
+    body: utf8.decode(response.bodyBytes),
+    headers: response.headers,
+  );
 }
 
 Future<void> deleteJson({
@@ -162,9 +180,10 @@ Future<AppResponse> _sendMultipart({
   final response = await _request(
     () => request.send().then(http.Response.fromStream),
   );
-  return AppResponse(
+  return appResponseWithHeaders(
     statusCode: response.statusCode,
     body: utf8.decode(response.bodyBytes),
+    headers: response.headers,
   );
 }
 
@@ -172,6 +191,9 @@ MediaType? _mediaTypeFromName(String name) {
   final lower = name.toLowerCase();
   if (lower.endsWith('.png')) return MediaType('image', 'png');
   if (lower.endsWith('.webp')) return MediaType('image', 'webp');
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+    return MediaType('image', 'jpeg');
+  }
   return MediaType('image', 'jpeg');
 }
 

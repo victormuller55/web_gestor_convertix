@@ -1,4 +1,4 @@
-const String server = 'https://api.convertix.net.br';
+const String server = 'http://localhost:5000';
 const String api = '$server/api/v1';
 
 String fotoUrl(String? path) {
@@ -7,7 +7,7 @@ String fotoUrl(String? path) {
   return '$server$path';
 }
 
-class AppEndpoints {
+class AppEndpoints { 
   // Auth
   static String endpointAuthLogin = '$api/auth/login';
 
@@ -40,4 +40,22 @@ class AppEndpoints {
   static String endpointBioLinkItensNovo = '$api/biolinks/itens/novo';
   static String endpointBioLinkItensAlterar = '$api/biolinks/itens/alterar-dados';
   static String endpointBioLinkItensApagar = '$api/biolinks/itens/apagar';
+
+  // Financeiro
+  static String endpointFinanceiroDashboard = '$api/financeiro/dashboard';
+
+  // Pagamentos
+  static String endpointPagamentos = '$api/pagamentos';
+  static String endpointPagamentosPix = '$api/pagamentos/pix';
+  static String endpointPagamentosCartao = '$api/pagamentos/cartao';
+  static String endpointPagamentosUltimos = '$api/pagamentos/ultimos';
+  static String endpointPagamentosHistorico = '$api/pagamentos/historico';
+  static String endpointPagamentoById(int id) => '$api/pagamentos/$id';
+  static String endpointPagamentoStatus(int id) => '$api/pagamentos/status/$id';
+  static String endpointPagamentoCancelar(int id) => '$api/pagamentos/$id/cancelar';
+  static String endpointPagamentoEstornar(int id) => '$api/pagamentos/$id/estornar';
+
+  // Assinaturas
+  static String endpointAssinaturas = '$api/assinaturas';
+  static String endpointAssinaturaById(int id) => '$api/assinaturas/$id';
 }

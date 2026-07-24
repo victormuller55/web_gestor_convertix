@@ -5,6 +5,7 @@ import 'package:web_gestor_site_covertix/app_config/const/covertix_colors.dart';
 import 'package:web_gestor_site_covertix/function/app_toast.dart';
 import 'package:web_gestor_site_covertix/function/http_helper.dart';
 import 'package:web_gestor_site_covertix/function/link_helper.dart';
+import 'package:web_gestor_site_covertix/function/validators.dart';
 import 'package:web_gestor_site_covertix/models/biolink_item_model.dart';
 import 'package:web_gestor_site_covertix/models/biolink_model.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/biolinks/biolink_itens_service.dart';
@@ -362,7 +363,7 @@ class _BiolinksItensDialogState extends State<BiolinksItensDialog> {
                       builder: (_, salvando, _) {
                         return appContainer(
                           backgroundColor: ConvertixColors.background,
-                          border: const Border(
+                          border: Border(
                             top: BorderSide(color: ConvertixColors.border),
                           ),
                           child: Padding(
@@ -488,7 +489,7 @@ class _ItemCadastroDialogState extends State<_ItemCadastroDialog> {
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
       hoverBorderColor: ConvertixColors.primary,
-      backgroundColor: AppColors.grey100,
+      backgroundColor: ConvertixColors.inputFill,
       icon: Icon(icon, color: ConvertixColors.primary),
       hint: hint,
       validator: validator,
@@ -561,6 +562,8 @@ class _ItemCadastroDialogState extends State<_ItemCadastroDialog> {
           dominioUrlFormField(
             controller: _urlController,
             width: double.infinity,
+            hint: 'exemplo.com/pagina',
+            validator: validateDominioUrlForm,
           ),
           appSizedBox(height: 10),
           StatefulBuilder(

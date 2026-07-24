@@ -35,6 +35,31 @@ class PageDataCache {
     await prefs.setInt('$_prefix$key$_tsSuffix', DateTime.now().millisecondsSinceEpoch);
   }
 
+  static Future<Map<String, dynamic>?> getJson(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    final timestamp = prefs.getInt('$_prefix$key$_tsSuffix');
+    if (timestamp == null || _isExpired(timestamp)) {
+      await invalidate(key);
+      return null;
+    }
+
+    final raw = prefs.getString('$_prefix$key');
+    if (raw == null || raw.isEmpty) return null;
+
+    try {
+      return Map<String, dynamic>.from(jsonDecode(raw) as Map);
+    } catch (_) {
+      await invalidate(key);
+      return null;
+    }
+  }
+
+  static Future<void> setJson(String key, Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('$_prefix$key', jsonEncode(data));
+    await prefs.setInt('$_prefix$key$_tsSuffix', DateTime.now().millisecondsSinceEpoch);
+  }
+
   static Future<void> invalidate(String key) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('$_prefix$key');

@@ -66,7 +66,7 @@ class _ClientesCadastroState extends State<ClientesCadastro> {
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
       hoverBorderColor: ConvertixColors.primary,
-      backgroundColor: AppColors.grey100,
+      backgroundColor: ConvertixColors.inputFill,
       icon: const Icon(Icons.badge_outlined, color: ConvertixColors.primary),
       hint: 'CPF ou CNPJ',
       textInputFormatter: DocumentoInputFormatter(),
@@ -84,16 +84,13 @@ class _ClientesCadastroState extends State<ClientesCadastro> {
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
       hoverBorderColor: ConvertixColors.primary,
-      backgroundColor: AppColors.grey100,
+      backgroundColor: ConvertixColors.inputFill,
       icon: const Icon(Icons.lock_outline, color: ConvertixColors.primary),
-      hint: _isEditMode ? 'Nova senha (opcional)' : AppStrings.digiteSuaSenha,
+      hint: _isEditMode
+          ? 'Nova senha (opcional, mín. 8 caracteres)'
+          : 'Senha (mín. 8 caracteres)',
       showContent: false,
-      validator: (value) {
-        if (!_isEditMode && (value == null || value.trim().isEmpty)) {
-          return 'Senha é obrigatória';
-        }
-        return null;
-      },
+      validator: (value) => validateSenha(value, required: !_isEditMode),
     );
     telefoneForm = AppFormField(
       context: context,
@@ -102,7 +99,7 @@ class _ClientesCadastroState extends State<ClientesCadastro> {
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
       hoverBorderColor: ConvertixColors.primary,
-      backgroundColor: AppColors.grey100,
+      backgroundColor: ConvertixColors.inputFill,
       icon: const Icon(Icons.phone_outlined, color: ConvertixColors.primary),
       hint: 'Telefone (opcional)',
       textInputFormatter: AppFormFormatters.phoneFormatter,
@@ -126,7 +123,7 @@ class _ClientesCadastroState extends State<ClientesCadastro> {
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
       hoverBorderColor: ConvertixColors.primary,
-      backgroundColor: AppColors.grey100,
+      backgroundColor: ConvertixColors.inputFill,
       icon: Icon(icon, color: ConvertixColors.primary),
       hint: hint,
       validator: validator,

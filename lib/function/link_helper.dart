@@ -27,6 +27,22 @@ String dominioParaFormulario(String? value) {
   return stripUrlProtocol(value);
 }
 
+/// Monta o host público: `subdominio.dominio` (ex.: ramossomar.convertix.net.br).
+String? urlPublicaSite({String? dominio, String? subdominio}) {
+  final d = dominioParaApi(dominio ?? '');
+  final s = (subdominio ?? '').trim();
+
+  if (d.isNotEmpty && s.isNotEmpty) {
+    final host = d.toLowerCase();
+    final sub = s.toLowerCase();
+    if (host == sub || host.startsWith('$sub.')) return d;
+    return '$s.$d';
+  }
+  if (d.isNotEmpty) return d;
+  if (s.isNotEmpty) return s;
+  return null;
+}
+
 Future<void> openExternalLink(String value) async {
   final url = normalizeUrl(value);
   if (url.isEmpty) return;

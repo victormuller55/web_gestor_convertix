@@ -20,6 +20,7 @@ InputDecoration covertixInputDecoration({
   String? prefixText,
   TextStyle? prefixStyle,
   EdgeInsetsGeometry? contentPadding,
+  BoxConstraints? prefixIconConstraints,
 }) {
   final border = _covertixInputBorderState(borderColor: borderColor, isHovered: isHovered);
 
@@ -28,13 +29,14 @@ InputDecoration covertixInputDecoration({
     isDense: isDense,
     filled: true,
     prefixIcon: prefixIcon,
+    prefixIconConstraints: prefixIconConstraints,
     prefixText: prefixText,
     prefixStyle: prefixStyle,
     border: border,
     enabledBorder: border,
     disabledBorder: border,
     focusedBorder: _covertixInputBorderState(borderColor: ConvertixColors.primary, isHovered: true),
-    fillColor: fillColor ?? Colors.grey.shade100,
+    fillColor: fillColor ?? ConvertixColors.inputFill,
     contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
     hintStyle: _covertixInputHintStyle(),
   );
@@ -54,7 +56,7 @@ TextStyle _covertixInputHintStyle() {
   return TextStyle(
     fontFamily: 'lato',
     fontSize: AppFontSizes.verySmall,
-    color: Colors.grey,
+    color: ConvertixColors.textMuted,
     letterSpacing: 1,
   );
 }

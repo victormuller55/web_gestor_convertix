@@ -47,7 +47,7 @@ _MenuItemStyle _resolveMenuItemStyle({
   }
 
   if (isSelected) {
-    return const _MenuItemStyle(
+    return _MenuItemStyle(
       backgroundColor: ConvertixColors.primaryDark,
       textColor: ConvertixColors.white,
       iconColor: ConvertixColors.white,
@@ -66,10 +66,10 @@ _MenuItemStyle _resolveMenuItemStyle({
     );
   }
 
-  return const _MenuItemStyle(
+  return _MenuItemStyle(
     backgroundColor: Colors.transparent,
-    textColor: Colors.grey,
-    iconColor: Colors.grey,
+    textColor: ConvertixColors.textMuted,
+    iconColor: ConvertixColors.textMuted,
     indicatorColor: Colors.transparent,
     borderColor: Colors.transparent,
   );
@@ -85,7 +85,11 @@ class _MenuItemSeparator extends StatelessWidget {
 }
 
 Widget _menuItemSeparator() {
-  return appContainer(height: 0.5, width: double.infinity, backgroundColor: Colors.grey.shade300);
+  return appContainer(
+    height: 0.5,
+    width: double.infinity,
+    backgroundColor: ConvertixColors.border,
+  );
 }
 
 Widget _menuItemIndicator(Color color) {
@@ -256,10 +260,10 @@ class _UserCardState extends State<_UserCard> {
 Widget _userCardContainer({required bool hover, required Widget child}) {
   return appContainer(
     padding: EdgeInsets.all(AppSpacing.normal),
-    border: const Border(bottom: BorderSide(color: ConvertixColors.border)),
+    border: Border(bottom: BorderSide(color: ConvertixColors.border)),
     backgroundColor: hover
         ? ConvertixColors.primary.withValues(alpha: 0.08)
-        : ConvertixColors.white,
+        : ConvertixColors.surface,
     child: child,
   );
 }
@@ -285,6 +289,8 @@ Widget _userCardAvatar(String? fotoUrl) {
       fotoUrl,
       width: 34,
       height: 34,
+      cacheWidth: 68,
+      cacheHeight: 68,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) => _userCardAvatarFallback(),
     ),
@@ -325,14 +331,16 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final ValueNotifier<int> _selectedIndex = ValueNotifier(0);
   final ValueNotifier<UsuarioModel?> _usuarioLogado = ValueNotifier(null);
-  bool _carregando = true;
-  List<MenuItem> _menuItems = [];
-  List<Widget> _pages = [];
+  final ValueNotifier<bool> _carregando = ValueNotifier(true);
+  final ValueNotifier<List<MenuItem>> _menuItems = ValueNotifier(const []);
+  final Map<String, Widget> _pageCache = {};
 
   @override
   void dispose() {
     _selectedIndex.dispose();
     _usuarioLogado.dispose();
+    _carregando.dispose();
+    _menuItems.dispose();
     super.dispose();
   }
 
@@ -358,12 +366,10 @@ class _HomePageState extends State<HomePage> {
 
     if (!mounted) return;
     _usuarioLogado.value = usuario;
-    setState(() {
-      _menuItems = itens;
-      _pages = itens.map((item) => item.page).toList();
-      _carregando = false;
-    });
+    _pageCache.clear();
+    _menuItems.value = itens;
     _selectedIndex.value = 0;
+    _carregando.value = false;
   }
 
   Future<void> _exitAccount() async {
@@ -382,15 +388,33 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _conteudoPaginas() {
-    if (_pages.isEmpty) return const SizedBox.shrink();
+    return ValueListenableBuilder<List<MenuItem>>(
+      valueListenable: _menuItems,
+      builder: (context, items, _) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        return ValueListenableBuilder<int>(
+          valueListenable: _selectedIndex,
+          builder: (context, index, _) {
+            if (index < 0 || index >= items.length) {
+              return const SizedBox.shrink();
+            }
+            final item = items[index];
+            _pageCache.putIfAbsent(item.id, item.pageBuilder);
 
-    return ValueListenableBuilder<int>(
-      valueListenable: _selectedIndex,
-      builder: (context, index, _) {
-        if (index >= _pages.length) return const SizedBox.shrink();
-        return IndexedStack(
-          index: index,
-          children: _pages,
+            // Mantém só páginas já visitadas (lazy) e preserva o State delas.
+            return Stack(
+              children: [
+                for (final entry in _pageCache.entries)
+                  Offstage(
+                    offstage: entry.key != item.id,
+                    child: TickerMode(
+                      enabled: entry.key == item.id,
+                      child: entry.value,
+                    ),
+                  ),
+              ],
+            );
+          },
         );
       },
     );
@@ -480,9 +504,9 @@ class _HomePageState extends State<HomePage> {
   Widget _logoHeader() {
     return appContainer(
       width: double.infinity,
-      backgroundColor: AppColors.white,
+      backgroundColor: ConvertixColors.surface,
       padding: EdgeInsets.symmetric(horizontal: AppSpacing.medium, vertical: AppSpacing.big),
-      border: const Border(bottom: BorderSide(color: ConvertixColors.border)),
+      border: Border(bottom: BorderSide(color: ConvertixColors.border)),
       child: appLogoConvertix(height: 60, alignment: Alignment.center),
     );
   }
@@ -491,26 +515,31 @@ class _HomePageState extends State<HomePage> {
     return appContainer(
       height: 1,
       width: double.infinity,
-      backgroundColor: AppColors.grey.withValues(alpha: 0.2),
+      backgroundColor: ConvertixColors.border,
     );
   }
 
   Widget _menuItemsList({required bool closeDrawerOnTap}) {
-    return ValueListenableBuilder<int>(
-      valueListenable: _selectedIndex,
-      builder: (context, selectedIndex, _) {
-        return ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            for (var i = 0; i < _menuItems.length; i++)
-              _menuItem(
-                title: _menuItems[i].title,
-                icon: _menuItems[i].icon,
-                indexMenu: i,
-                isSelected: selectedIndex == i,
-                closeDrawerOnTap: closeDrawerOnTap,
-              ),
-          ],
+    return ValueListenableBuilder<List<MenuItem>>(
+      valueListenable: _menuItems,
+      builder: (context, items, _) {
+        return ValueListenableBuilder<int>(
+          valueListenable: _selectedIndex,
+          builder: (context, selectedIndex, _) {
+            return ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                for (var i = 0; i < items.length; i++)
+                  _menuItem(
+                    title: items[i].title,
+                    icon: items[i].icon,
+                    indexMenu: i,
+                    isSelected: selectedIndex == i,
+                    closeDrawerOnTap: closeDrawerOnTap,
+                  ),
+              ],
+            );
+          },
         );
       },
     );
@@ -519,8 +548,8 @@ class _HomePageState extends State<HomePage> {
   Widget _menuContent({bool closeDrawerOnTap = false}) {
     return appContainer(
       width: _menuWidth,
-      backgroundColor: Colors.grey.shade100,
-      border: Border(right: BorderSide(color: AppColors.white.withValues(alpha: 0.08))),
+      backgroundColor: ConvertixColors.menuPanel,
+      border: Border(right: BorderSide(color: ConvertixColors.border)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -550,7 +579,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _loadingBody() {
     return appLoading(
-      child: CircularProgressIndicator(color: ConvertixColors.primary, strokeWidth: 2.5),
+      child: CircularProgressIndicator(color: ConvertixColors.primary),
     );
   }
 
@@ -566,7 +595,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _drawer() {
     return Drawer(
-      backgroundColor: ConvertixColors.sidebarBackground,
+      backgroundColor: ConvertixColors.menuPanel,
       child: _menuContent(closeDrawerOnTap: true),
     );
   }
@@ -595,8 +624,13 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_carregando) return _loadingScaffold();
-    return _mainScaffold(useDrawer: _useDrawer(context));
+    return ValueListenableBuilder<bool>(
+      valueListenable: _carregando,
+      builder: (context, carregando, _) {
+        if (carregando) return _loadingScaffold();
+        return _mainScaffold(useDrawer: _useDrawer(context));
+      },
+    );
   }
 }
 

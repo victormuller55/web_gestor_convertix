@@ -6,25 +6,23 @@ import 'package:web_gestor_site_covertix/models/usuario_model.dart';
 
 const String _keyToken = 'auth_token';
 const String _keyUsuario = 'usuario_logado';
-const String _keyAuthDay = 'auth_saved_day';
-
-String _todayKey() {
-  final now = DateTime.now();
-  final month = now.month.toString().padLeft(2, '0');
-  final day = now.day.toString().padLeft(2, '0');
-  return '${now.year}-$month-$day';
-}
+const String _keyAuthExpiresAt = 'auth_expires_at';
+const Duration _tokenTtl = Duration(hours: 24);
 
 Future<bool> _isSessaoExpirada(SharedPreferences prefs) async {
-  final savedDay = prefs.getString(_keyAuthDay);
-  if (savedDay == null || savedDay.isEmpty) return true;
-  return savedDay != _todayKey();
+  final expiresAtRaw = prefs.getString(_keyAuthExpiresAt);
+  if (expiresAtRaw == null || expiresAtRaw.isEmpty) return true;
+  final expiresAt = DateTime.tryParse(expiresAtRaw);
+  if (expiresAt == null) return true;
+  return DateTime.now().isAfter(expiresAt);
 }
 
 Future<void> _clearSessao(SharedPreferences prefs) async {
   await prefs.remove(_keyToken);
   await prefs.remove(_keyUsuario);
-  await prefs.remove(_keyAuthDay);
+  await prefs.remove(_keyAuthExpiresAt);
+  await prefs.remove('auth_saved_day');
+  await prefs.remove('theme_dark_mode');
   await PageDataCache.clearAll();
 }
 
@@ -36,6 +34,13 @@ Future<bool> _ensureSessaoAtiva() async {
     await _clearSessao(prefs);
   }
   return false;
+}
+
+/// Indica se há token persistido (mesmo que a sessão possa estar inválida na API).
+Future<bool> hasTokenSalvo() async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString(_keyToken);
+  return token != null && token.isNotEmpty;
 }
 
 Future<bool> hasSessaoValida() async {
@@ -59,7 +64,8 @@ Future<String?> getToken() async {
 Future<void> saveToken(String token) async {
   final prefs = await SharedPreferences.getInstance();
   await prefs.setString(_keyToken, token);
-  await prefs.setString(_keyAuthDay, _todayKey());
+  final expiresAt = DateTime.now().add(_tokenTtl).toIso8601String();
+  await prefs.setString(_keyAuthExpiresAt, expiresAt);
 }
 
 Future<void> clearToken() async {

@@ -26,7 +26,11 @@ class EntrarBloc extends Bloc<EntrarEvent, EntrarState> {
         emit(EntrarSuccessState(usuarioModel: usuarioModel));
         open(screen: const HomePage(), closePrevious: true);
       } catch (e) {
-        emit(EntrarErrorState(errorModel: errorModelFromException(e)));
+        emit(
+          EntrarErrorState(
+            errorModel: errorModelFromException(e, isAuthEndpoint: true),
+          ),
+        );
       }
     });
   }

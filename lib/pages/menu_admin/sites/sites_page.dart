@@ -6,7 +6,9 @@ import 'package:web_gestor_site_covertix/app_config/app_auth.dart';
 import 'package:web_gestor_site_covertix/app_config/const/app_theme.dart';
 import 'package:web_gestor_site_covertix/app_config/const/covertix_colors.dart';
 import 'package:web_gestor_site_covertix/function/app_toast.dart';
+import 'package:web_gestor_site_covertix/function/debounce.dart';
 import 'package:web_gestor_site_covertix/function/link_helper.dart';
+import 'package:web_gestor_site_covertix/models/app_enums.dart';
 import 'package:web_gestor_site_covertix/models/site_model.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/sites/sites_bloc.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/sites/sites_cadastro.dart';
@@ -16,6 +18,7 @@ import 'package:web_gestor_site_covertix/widgets/app_confirm_dialog.dart';
 import 'package:web_gestor_site_covertix/widgets/app_elevated_button.dart';
 import 'package:web_gestor_site_covertix/widgets/app_loading.dart';
 import 'package:web_gestor_site_covertix/widgets/app_reload_button.dart';
+import 'package:web_gestor_site_covertix/widgets/covertix_dropdown_form_field.dart';
 import 'package:web_gestor_site_covertix/widgets/table/table.dart';
 import 'package:web_gestor_site_covertix/widgets/table/table_cell.dart';
 import 'package:web_gestor_site_covertix/widgets/table/table_header.dart';
@@ -43,8 +46,18 @@ class _SitesPageState extends State<SitesPage> {
   final ValueNotifier<bool> _isAdminNotifier = ValueNotifier(false);
   final ValueNotifier<int?> _clienteIdLogadoNotifier = ValueNotifier(null);
   final ValueNotifier<bool> _isReloading = ValueNotifier(false);
+  final ValueNotifier<String?> _filtroStatus = ValueNotifier(null);
+  final ValueNotifier<String?> _filtroTipo = ValueNotifier(null);
+  final ValueNotifier<String?> _filtroSituacaoAssinatura = ValueNotifier(null);
+  final ValueNotifier<String?> _filtroDominio = ValueNotifier(null);
+  final Debouncer _buscaDebouncer = Debouncer();
+  String _busca = '';
 
   String get _titulo => widget.tituloPagina ?? 'Sites';
+  bool get _tipoFixo =>
+      widget.tipoFiltro != null && widget.tipoFiltro!.isNotEmpty;
+
+  static const _filterWidth = 180.0;
 
   static const _idFlex = 0.25;
   static const _nomeFlex = 0.55;
@@ -52,6 +65,7 @@ class _SitesPageState extends State<SitesPage> {
   static const _tipoFlex = 0.35;
   static const _subdominioFlex = 0.35;
   static const _dominioFlex = 0.45;
+  static const _situacaoFlex = 0.4;
   static const _valorFlex = 0.35;
   static const _diasFlex = 0.3;
   static const _vencFlex = 0.4;
@@ -72,11 +86,16 @@ class _SitesPageState extends State<SitesPage> {
 
   @override
   void dispose() {
+    _buscaDebouncer.dispose();
     _formSearch.controller.dispose();
     _sitesNotifier.dispose();
     _isAdminNotifier.dispose();
     _clienteIdLogadoNotifier.dispose();
     _isReloading.dispose();
+    _filtroStatus.dispose();
+    _filtroTipo.dispose();
+    _filtroSituacaoAssinatura.dispose();
+    _filtroDominio.dispose();
     bloc.close();
     super.dispose();
   }
@@ -103,14 +122,14 @@ class _SitesPageState extends State<SitesPage> {
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
       hoverBorderColor: ConvertixColors.primary,
-      backgroundColor: AppColors.grey100,
+      backgroundColor: ConvertixColors.inputFill,
       icon: const Icon(Icons.search, color: ConvertixColors.primary),
       hint: AppStrings.digiteAlgoParaPesquisar,
-      onChange: _search,
+      onChange: _onBusca,
     );
   }
 
-  List<SiteModel> _filtrarPorTipo(List<SiteModel> sites) {
+  List<SiteModel> _filtrarPorTipoPagina(List<SiteModel> sites) {
     final tipo = widget.tipoFiltro;
     if (tipo == null || tipo.isEmpty) return sites;
     return sites.where((s) => s.tipo == tipo).toList();
@@ -125,31 +144,68 @@ class _SitesPageState extends State<SitesPage> {
     _loadData(forceRefresh: true);
   }
 
-  void _search(String termo) {
-    termo = termo.toLowerCase();
-    final filtrados = _allSites.where((s) {
-      final id = s.id?.toString() ?? '';
-      final nome = s.nome?.toLowerCase() ?? '';
-      final cliente = s.clienteNomeEmpresa?.toLowerCase() ?? '';
-      final tipo = SiteModel.labelTipo(s.tipo).toLowerCase();
-      final dominio = s.dominio?.toLowerCase() ?? '';
-      final subdominio = s.subdominio?.toLowerCase() ?? '';
-      final status = SiteModel.labelStatus(s.status).toLowerCase();
-      return id.contains(termo) ||
-          nome.contains(termo) ||
-          cliente.contains(termo) ||
-          tipo.contains(termo) ||
-          dominio.contains(termo) ||
-          subdominio.contains(termo) ||
-          status.contains(termo);
+  void _onBusca(String termo) {
+    _buscaDebouncer.run(() {
+      _busca = termo.trim().toLowerCase();
+      _aplicarFiltros();
+    });
+  }
+
+  void _aplicarFiltros() {
+    final status = _filtroStatus.value;
+    final tipo = _filtroTipo.value;
+    final situacao = _filtroSituacaoAssinatura.value;
+    final dominioFiltro = _filtroDominio.value;
+
+    _sitesNotifier.value = _allSites.where((s) {
+      if (status != null && s.status != status) return false;
+      if (!_tipoFixo && tipo != null && s.tipo != tipo) return false;
+      if (situacao != null &&
+          (s.situacaoAssinatura ?? SituacaoAssinaturaSite.desativado) !=
+              situacao) {
+        return false;
+      }
+      if (dominioFiltro == 'COM' &&
+          (s.dominio == null || s.dominio!.trim().isEmpty)) {
+        return false;
+      }
+      if (dominioFiltro == 'SEM' &&
+          s.dominio != null &&
+          s.dominio!.trim().isNotEmpty) {
+        return false;
+      }
+      if (_busca.isNotEmpty) {
+        final id = s.id?.toString() ?? '';
+        final nome = s.nome?.toLowerCase() ?? '';
+        final cliente = s.clienteNomeEmpresa?.toLowerCase() ?? '';
+        final tipoLabel = SiteModel.labelTipo(s.tipo).toLowerCase();
+        final dominio = s.dominio?.toLowerCase() ?? '';
+        final subdominio = s.subdominio?.toLowerCase() ?? '';
+        final statusLabel = SiteModel.labelStatus(s.status).toLowerCase();
+        final situacaoLabel =
+            SiteModel.labelSituacaoAssinatura(s.situacaoAssinatura)
+                .toLowerCase();
+        final url = _urlSite(s)?.toLowerCase() ?? '';
+        if (!(id.contains(_busca) ||
+            nome.contains(_busca) ||
+            cliente.contains(_busca) ||
+            tipoLabel.contains(_busca) ||
+            dominio.contains(_busca) ||
+            subdominio.contains(_busca) ||
+            statusLabel.contains(_busca) ||
+            situacaoLabel.contains(_busca) ||
+            url.contains(_busca))) {
+          return false;
+        }
+      }
+      return true;
     }).toList();
-    _sitesNotifier.value = filtrados;
   }
 
   void _onChangeState(SitesState state) {
     if (state is SitesSuccessState) {
-      _allSites = _filtrarPorTipo(state.sites);
-      _sitesNotifier.value = List.from(_allSites);
+      _allSites = _filtrarPorTipoPagina(state.sites);
+      _aplicarFiltros();
       if (_isReloading.value) _isReloading.value = false;
     }
     if (state is SitesErrorState && _isReloading.value) {
@@ -177,22 +233,19 @@ class _SitesPageState extends State<SitesPage> {
     }
     final siteInicial = site ??
         SiteModel.empty(
-          clienteId: _isAdminNotifier.value ? null : _clienteIdLogadoNotifier.value,
+          clienteId:
+              _isAdminNotifier.value ? null : _clienteIdLogadoNotifier.value,
         );
-    await showDialog<bool>(
+    final salvo = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (_) => _cadastroDialog(siteInicial),
     );
-    _loadData();
+    if (salvo == true) _loadData(forceRefresh: true);
   }
 
   String? _urlSite(SiteModel site) {
-    final dominio = site.dominio?.trim();
-    if (dominio != null && dominio.isNotEmpty) return dominio;
-    final subdominio = site.subdominio?.trim();
-    if (subdominio != null && subdominio.isNotEmpty) return subdominio;
-    return null;
+    return urlPublicaSite(dominio: site.dominio, subdominio: site.subdominio);
   }
 
   String _textoOuTraco(String? value) {
@@ -332,7 +385,8 @@ class _SitesPageState extends State<SitesPage> {
         icon: Icons.open_in_new,
         title: 'Abrir site',
         color: podeAbrir ? ConvertixColors.primaryLight : AppColors.grey200,
-        textColor: podeAbrir ? ConvertixColors.primaryDark : ConvertixColors.textMuted,
+        textColor:
+            podeAbrir ? ConvertixColors.primaryDark : ConvertixColors.textMuted,
         onTap: () => _onAbrirSite(site),
       ),
       _popupItemMenu(
@@ -349,7 +403,7 @@ class _SitesPageState extends State<SitesPage> {
     return PopupMenuButton(
       icon: Icon(Icons.more_vert, color: ConvertixColors.textSecondary, size: 20),
       iconSize: 20,
-      color: AppColors.white,
+      color: ConvertixColors.surface,
       padding: EdgeInsets.zero,
       menuPadding: EdgeInsets.zero,
       itemBuilder: (_) => _popupMenuItems(site),
@@ -369,6 +423,29 @@ class _SitesPageState extends State<SitesPage> {
     );
   }
 
+  Widget _filtroDropdown<T>({
+    required ValueNotifier<T?> notifier,
+    required String hint,
+    required List<DropdownMenuItem<T?>> items,
+  }) {
+    return covertixFilterBarItem(
+      width: _filterWidth,
+      child: ValueListenableBuilder<T?>(
+        valueListenable: notifier,
+        builder: (_, value, __) => covertixDropdownFormField<T?>(
+          value: value,
+          hint: hint,
+          withTopInset: false,
+          items: items,
+          onChanged: (v) {
+            notifier.value = v;
+            _aplicarFiltros();
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _filters(bool isAdmin) {
     return SizedBox(
       width: double.infinity,
@@ -377,8 +454,75 @@ class _SitesPageState extends State<SitesPage> {
         child: Wrap(
           spacing: AppSpacing.normal,
           runSpacing: AppSpacing.normal,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             _formSearch.formulario,
+            _filtroDropdown<String>(
+              notifier: _filtroStatus,
+              hint: 'Status',
+              items: [
+                const DropdownMenuItem(value: null, child: Text('Todos status')),
+                DropdownMenuItem(
+                  value: StatusSite.ativo,
+                  child: Text(SiteModel.labelStatus(StatusSite.ativo)),
+                ),
+                DropdownMenuItem(
+                  value: StatusSite.inativo,
+                  child: Text(SiteModel.labelStatus(StatusSite.inativo)),
+                ),
+                DropdownMenuItem(
+                  value: StatusSite.emDesenvolvimento,
+                  child: Text(
+                    SiteModel.labelStatus(StatusSite.emDesenvolvimento),
+                  ),
+                ),
+              ],
+            ),
+            if (!_tipoFixo)
+              _filtroDropdown<String>(
+                notifier: _filtroTipo,
+                hint: 'Tipo',
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('Todos tipos')),
+                  DropdownMenuItem(
+                    value: TipoSite.biolink,
+                    child: Text(SiteModel.labelTipo(TipoSite.biolink)),
+                  ),
+                  DropdownMenuItem(
+                    value: TipoSite.landingPage,
+                    child: Text(SiteModel.labelTipo(TipoSite.landingPage)),
+                  ),
+                  DropdownMenuItem(
+                    value: TipoSite.siteComercial,
+                    child: Text(SiteModel.labelTipo(TipoSite.siteComercial)),
+                  ),
+                ],
+              ),
+            _filtroDropdown<String>(
+              notifier: _filtroSituacaoAssinatura,
+              hint: 'Assinatura',
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('Todas situações'),
+                ),
+                ...SituacaoAssinaturaSite.todos.map(
+                  (s) => DropdownMenuItem(
+                    value: s,
+                    child: Text(SiteModel.labelSituacaoAssinatura(s)),
+                  ),
+                ),
+              ],
+            ),
+            _filtroDropdown<String>(
+              notifier: _filtroDominio,
+              hint: 'Domínio',
+              items: const [
+                DropdownMenuItem(value: null, child: Text('Todos domínios')),
+                DropdownMenuItem(value: 'COM', child: Text('Com domínio')),
+                DropdownMenuItem(value: 'SEM', child: Text('Sem domínio')),
+              ],
+            ),
             if (isAdmin) _cadastrarButton(),
           ],
         ),
@@ -395,6 +539,7 @@ class _SitesPageState extends State<SitesPage> {
       cellHeader('Tipo', _tipoFlex),
       cellHeader('Subdomínio', _subdominioFlex),
       cellHeader('Domínio', _dominioFlex),
+      cellHeader('Situação Assinatura', _situacaoFlex),
       cellHeader('Valor', _valorFlex),
       cellHeader('Dias', _diasFlex),
       cellHeader('Vencimento', _vencFlex),
@@ -408,7 +553,9 @@ class _SitesPageState extends State<SitesPage> {
 
   Widget _tableRow(SiteModel site, bool isAdmin) {
     final info = site.dominioInfo;
+    final url = _urlSite(site);
     return appTableRow(
+      key: ValueKey(site.id ?? site.nome),
       columns: [
         cellAction(_popupMenu(site)),
         if (isAdmin) cellText(site.id?.toString() ?? '—', _idFlex),
@@ -416,7 +563,11 @@ class _SitesPageState extends State<SitesPage> {
         if (isAdmin) cellText(site.clienteNomeEmpresa ?? '—', _clienteFlex),
         cellText(SiteModel.labelTipo(site.tipo), _tipoFlex),
         cellText(_textoOuTraco(site.subdominio), _subdominioFlex),
-        cellLink(site.dominio, _dominioFlex),
+        cellLink(site.dominio, _dominioFlex, href: url),
+        cellSituacaoAssinatura(
+          site.situacaoAssinatura ?? SituacaoAssinaturaSite.desativado,
+          _situacaoFlex,
+        ),
         cellMoney(info?.valorDominio, _valorFlex),
         cellDuracaoDominio(info?.duracaoDominio, _diasFlex),
         cellDate(info?.dataFimDominio, _vencFlex),
@@ -429,15 +580,12 @@ class _SitesPageState extends State<SitesPage> {
     );
   }
 
-  List<Widget> _tableRows(List<SiteModel> sites, bool isAdmin) {
-    return sites.map((s) => _tableRow(s, isAdmin)).toList();
-  }
-
   Widget _table(List<SiteModel> sites, bool isAdmin) {
     return AppTable(
       rowsPerPage: 30,
       headers: _tableHeaders(isAdmin),
-      rows: _tableRows(sites, isAdmin),
+      itemCount: sites.length,
+      rowBuilder: (index) => _tableRow(sites[index], isAdmin),
     );
   }
 

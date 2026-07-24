@@ -171,13 +171,37 @@ Widget cellText(String value, double flex, {bool showDivider = true}) {
   );
 }
 
-Widget cellLink(String? value, double flex, {bool showDivider = true}) {
+Widget cellLink(
+  String? value,
+  double flex, {
+  bool showDivider = true,
+  String? href,
+}) {
   final display = value == null || value.trim().isEmpty ? '—' : value.trim();
 
   return cell(
-    child: _cellLinkContent(display),
+    child: _cellLinkContent(display, href: href),
     flex: flex,
     showDivider: showDivider,
+  );
+}
+
+Widget cellSituacaoAssinatura(
+  String? situacao,
+  double flex, {
+  bool showDivider = true,
+}) {
+  final badge = _situacaoAssinaturaBadge(situacao);
+
+  return cell(
+    flex: flex,
+    showDivider: showDivider,
+    child: _tableStatusChip(
+      label: SiteModel.labelSituacaoAssinatura(situacao),
+      backgroundColor: badge.backgroundColor,
+      textColor: badge.textColor,
+      borderColor: badge.borderColor,
+    ),
   );
 }
 
@@ -297,7 +321,7 @@ Widget _tableCellShell({
     width: useFixed ? fixedCellWidth : null,
     decoration: BoxDecoration(
       border: showDivider
-          ? const Border(
+          ? Border(
               right: BorderSide(color: ConvertixColors.border, width: 1),
             )
           : null,
@@ -324,17 +348,18 @@ Widget _tableStatusChip({
   );
 }
 
-Widget _cellLinkContent(String display) {
+Widget _cellLinkContent(String display, {String? href}) {
   if (display == '—') {
     return _tableSelectableText(display, color: ConvertixColors.textMuted);
   }
 
-  final uri = Uri.tryParse(normalizeUrl(display));
+  final target = (href != null && href.trim().isNotEmpty) ? href.trim() : display;
+  final uri = Uri.tryParse(normalizeUrl(target));
   if (uri != null && uri.host.isNotEmpty) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       child: InkWell(
-        onTap: () => openExternalLink(display),
+        onTap: () => openExternalLink(target),
         child: _tableSelectableText(
           display,
           color: ConvertixColors.primary,
@@ -354,6 +379,8 @@ Widget _cellFotoImage(String path) {
       fotoUrl(path),
       width: 32,
       height: 32,
+      cacheWidth: 64,
+      cacheHeight: 64,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) => Icon(
         Icons.broken_image_outlined,
@@ -404,6 +431,31 @@ Widget _cellFotoImage(String path) {
         backgroundColor: const Color(0xFFFEF9C3),
         textColor: const Color(0xFF854D0E),
         borderColor: const Color(0xFFFDE047),
+      );
+    default:
+      return (
+        backgroundColor: ConvertixColors.background,
+        textColor: ConvertixColors.textMuted,
+        borderColor: ConvertixColors.border,
+      );
+  }
+}
+
+({Color backgroundColor, Color textColor, Color borderColor}) _situacaoAssinaturaBadge(
+  String? situacao,
+) {
+  switch (situacao) {
+    case SituacaoAssinaturaSite.emDia:
+      return (
+        backgroundColor: ConvertixColors.primaryLight,
+        textColor: ConvertixColors.primaryDark,
+        borderColor: ConvertixColors.primary.withValues(alpha: 0.25),
+      );
+    case SituacaoAssinaturaSite.vencido:
+      return (
+        backgroundColor: ConvertixColors.errorBackground,
+        textColor: ConvertixColors.error,
+        borderColor: ConvertixColors.error.withValues(alpha: 0.25),
       );
     default:
       return (

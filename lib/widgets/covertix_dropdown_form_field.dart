@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:muller_package/muller_package.dart';
 import 'package:web_gestor_site_covertix/app_config/const/covertix_colors.dart';
 import 'package:web_gestor_site_covertix/widgets/covertix_input_decorations.dart';
 
@@ -26,7 +27,8 @@ class CovertixDropdownFormField<T> extends StatefulWidget {
 }
 
 class _CovertixDropdownFormFieldState<T> extends State<CovertixDropdownFormField<T>> {
-  static const double _filterBarHeight = 40;
+  /// Mesma altura visual do AppFormField dense com ícone de busca.
+  static const double _filterBarHeight = 48;
 
   @override
   Widget build(BuildContext context) {
@@ -82,6 +84,15 @@ Widget _covertixDropdownField<T>({
         key: ValueKey(value),
         initialValue: value,
         isExpanded: true,
+        isDense: true,
+        iconSize: 20,
+        style: TextStyle(
+          fontFamily: 'lato',
+          fontSize: AppFontSizes.verySmall,
+          color: ConvertixColors.textPrimary,
+          letterSpacing: 1,
+          height: 1.2,
+        ),
         decoration: covertixDropdownDecoration(hint: hint, isHovered: isHovered),
         items: items,
         onChanged: onChanged,
@@ -99,8 +110,22 @@ InputDecoration covertixDropdownDecoration({
     hint: hint,
     borderColor: ConvertixColors.border,
     isHovered: isHovered,
-    fillColor: Colors.grey.shade100,
+    fillColor: ConvertixColors.inputFill,
     isDense: true,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+    // Preenche a altura 48 do slot da barra de filtros (igual ao AppFormField com ícone).
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+  );
+}
+
+/// Slot padrão da barra de filtros: mesma altura do campo de busca e do botão.
+Widget covertixFilterBarItem({
+  required double width,
+  required Widget child,
+  double height = 48,
+  double topInset = 10,
+}) {
+  return Padding(
+    padding: EdgeInsets.only(top: topInset),
+    child: SizedBox(width: width, height: height, child: child),
   );
 }

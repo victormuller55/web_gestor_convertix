@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:muller_package/muller_package.dart';
 import 'package:web_gestor_site_covertix/app_config/const/app_theme.dart';
 import 'package:web_gestor_site_covertix/app_config/const/covertix_colors.dart';
+import 'package:web_gestor_site_covertix/function/api_error.dart';
 import 'package:web_gestor_site_covertix/function/link_helper.dart';
 import 'package:web_gestor_site_covertix/function/validators.dart';
 import 'package:web_gestor_site_covertix/pages/login_page/entrar_bloc.dart';
@@ -26,10 +29,53 @@ class _LoginPageState extends State<LoginPage> {
   late final AppFormField _loginForm;
   late final AppFormField _passwordForm;
 
+  DateTime? _submitBlockedUntil;
+  Timer? _cooldownTimer;
+  int _cooldownSecondsLeft = 0;
+
+  bool get _submitBloqueado =>
+      _submitBlockedUntil != null &&
+      DateTime.now().isBefore(_submitBlockedUntil!);
+
   void _save() {
+    if (_submitBloqueado) return;
     if (_formKey.currentState!.validate()) {
       bloc.add(EntrarLoginEvent(_loginForm.value, _passwordForm.value));
     }
+  }
+
+  void _aplicarCooldownSe429(ErrorModel? error) {
+    if (error == null) return;
+    final seconds = retryAfterSecondsFromError(error) ??
+        (error.tipo == '429' ? 60 : null);
+    if (seconds == null || seconds <= 0) return;
+
+    _cooldownTimer?.cancel();
+    setState(() {
+      _submitBlockedUntil =
+          DateTime.now().add(Duration(seconds: seconds));
+      _cooldownSecondsLeft = seconds;
+    });
+
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      final remaining = _submitBlockedUntil
+              ?.difference(DateTime.now())
+              .inSeconds ??
+          0;
+      if (remaining <= 0) {
+        timer.cancel();
+        setState(() {
+          _submitBlockedUntil = null;
+          _cooldownSecondsLeft = 0;
+        });
+        return;
+      }
+      setState(() => _cooldownSecondsLeft = remaining);
+    });
   }
 
   @override
@@ -41,7 +87,7 @@ class _LoginPageState extends State<LoginPage> {
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
       hoverBorderColor: ConvertixColors.primary,
-      icon: const Icon(Icons.email_outlined, color: ConvertixColors.textMuted),
+      icon: Icon(Icons.email_outlined, color: ConvertixColors.textMuted),
       backgroundColor: ConvertixColors.surface,
       hintColor: ConvertixColors.textMuted,
       inputColor: ConvertixColors.textPrimary,
@@ -55,7 +101,7 @@ class _LoginPageState extends State<LoginPage> {
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
       hoverBorderColor: ConvertixColors.primary,
-      icon: const Icon(Icons.lock_outline, color: ConvertixColors.textMuted),
+      icon: Icon(Icons.lock_outline, color: ConvertixColors.textMuted),
       backgroundColor: ConvertixColors.surface,
       hintColor: ConvertixColors.textMuted,
       inputColor: ConvertixColors.textPrimary,
@@ -106,14 +152,32 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _loginButtons() {
+    final bloqueado = _submitBloqueado;
+    final titulo = bloqueado
+        ? 'Aguarde ${_cooldownSecondsLeft}s'
+        : AppStrings.entrar;
+
     return Column(
       children: [
         appSizedBox(height: AppSpacing.medium),
-        appElevatedButtonCovertix(title: AppStrings.entrar, onTap: _save, width: 360, height: 48),
+        Opacity(
+          opacity: bloqueado ? 0.55 : 1,
+          child: IgnorePointer(
+            ignoring: bloqueado,
+            child: appElevatedButtonCovertix(
+              title: titulo,
+              onTap: _save,
+              width: 360,
+              height: 48,
+            ),
+          ),
+        ),
         appSizedBox(height: AppSpacing.normal),
         appElevatedButtonCovertix(
           title: 'Não tenho conta',
-          onTap: () => openExternalLink('https://convertix.net.br/pages/home.html#planos'),
+          onTap: () => openExternalLink(
+            'https://convertix.net.br/pages/home.html#planos',
+          ),
           width: 360,
           height: 48,
           invertedStyle: true,
@@ -144,7 +208,8 @@ class _LoginPageState extends State<LoginPage> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           _formHeader(),
-          if (error != null && error.mensagem!.isNotEmpty) _loginErrorBanner(error),
+          if (error != null && error.mensagem!.isNotEmpty)
+            _loginErrorBanner(error),
           _loginFields(),
           _loginButtons(),
           _loginFooter(),
@@ -161,14 +226,24 @@ class _LoginPageState extends State<LoginPage> {
     return appContainer(
       height: 320,
       child: appLoading(
-        child: CircularProgressIndicator(color: ConvertixColors.primary, strokeWidth: 2.5),
+        child: CircularProgressIndicator(color: ConvertixColors.primary),
       ),
     );
   }
 
   Widget _bodyBuilder() {
-    return BlocBuilder<EntrarBloc, EntrarState>(
+    return BlocConsumer<EntrarBloc, EntrarState>(
       bloc: bloc,
+      listenWhen: (prev, curr) => curr is EntrarErrorState,
+      listener: (context, state) {
+        if (state is EntrarErrorState) {
+          _aplicarCooldownSe429(state.errorModel);
+        }
+      },
+      buildWhen: (prev, curr) =>
+          curr is EntrarLoadingState ||
+          prev is EntrarLoadingState ||
+          curr.runtimeType != prev.runtimeType,
       builder: (context, state) {
         if (state is EntrarLoadingState) {
           return _loading();
@@ -194,6 +269,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
+    _cooldownTimer?.cancel();
     _loginForm.controller.dispose();
     _passwordForm.controller.dispose();
     bloc.close();

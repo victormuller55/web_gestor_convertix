@@ -43,8 +43,7 @@ class _AuthGateState extends State<AuthGate> {
           child: appLoading(
             child: CircularProgressIndicator(
               color: ConvertixColors.primary,
-              strokeWidth: 2.5,
-            ),
+             ),
           ),
         ),
       );

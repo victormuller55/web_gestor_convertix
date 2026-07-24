@@ -5,6 +5,7 @@ import 'package:muller_package/muller_package.dart';
 import 'package:web_gestor_site_covertix/app_config/const/app_theme.dart';
 import 'package:web_gestor_site_covertix/app_config/const/covertix_colors.dart';
 import 'package:web_gestor_site_covertix/function/app_toast.dart';
+import 'package:web_gestor_site_covertix/function/debounce.dart';
 import 'package:web_gestor_site_covertix/models/usuario_model.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/usuarios/usuarios_bloc.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/usuarios/usuarios_cadastro.dart';
@@ -32,6 +33,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
   late List<UsuarioModel> _allUsuarios;
   late ValueNotifier<List<UsuarioModel>> _usuariosNotifier;
   final ValueNotifier<bool> _isReloading = ValueNotifier(false);
+  final Debouncer _buscaDebouncer = Debouncer();
 
   static const _fotoFlex = 0.25;
   static const _emailFlex = 0.7;
@@ -50,6 +52,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
 
   @override
   void dispose() {
+    _buscaDebouncer.dispose();
     _formSearch.controller.dispose();
     _usuariosNotifier.dispose();
     _isReloading.dispose();
@@ -79,7 +82,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
       hoverBorderColor: ConvertixColors.primary,
-      backgroundColor: AppColors.grey100,
+      backgroundColor: ConvertixColors.inputFill,
       icon: const Icon(Icons.search, color: ConvertixColors.primary),
       hint: AppStrings.digiteAlgoParaPesquisar,
       onChange: _search,
@@ -96,16 +99,16 @@ class _UsuariosPageState extends State<UsuariosPage> {
   }
 
   void _search(String termo) {
-    termo = termo.toLowerCase();
-    final filtrados = _allUsuarios.where((u) {
-      final nome = u.nome?.toLowerCase() ?? '';
-      final email = u.email?.toLowerCase() ?? '';
-      final tipo = u.tipo?.toLowerCase() ?? '';
-      return nome.contains(termo) ||
-          email.contains(termo) ||
-          tipo.contains(termo);
-    }).toList();
-    _usuariosNotifier.value = filtrados;
+    _buscaDebouncer.run(() {
+      final q = termo.toLowerCase();
+      final filtrados = _allUsuarios.where((u) {
+        final nome = u.nome?.toLowerCase() ?? '';
+        final email = u.email?.toLowerCase() ?? '';
+        final tipo = u.tipo?.toLowerCase() ?? '';
+        return nome.contains(q) || email.contains(q) || tipo.contains(q);
+      }).toList();
+      _usuariosNotifier.value = filtrados;
+    });
   }
 
   void _onChangeState(UsuariosState state) {
@@ -126,12 +129,12 @@ class _UsuariosPageState extends State<UsuariosPage> {
   void _onCadastrarNovo() => _abrirCadastro();
 
   Future<void> _abrirCadastro({UsuarioModel? usuario}) async {
-    await showDialog<bool>(
+    final salvo = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (_) => _cadastroDialog(usuario),
     );
-    _loadData(forceRefresh: true);
+    if (salvo == true) _loadData(forceRefresh: true);
   }
 
   void _onEditarUsuario(UsuarioModel usuario) {
@@ -257,7 +260,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
     return PopupMenuButton(
       icon: Icon(Icons.more_vert, color: ConvertixColors.textSecondary, size: 20),
       iconSize: 20,
-      color: AppColors.white,
+      color: ConvertixColors.surface,
       padding: EdgeInsets.zero,
       menuPadding: EdgeInsets.zero,
       itemBuilder: (_) => _popupMenuItems(usuario),
@@ -322,15 +325,12 @@ class _UsuariosPageState extends State<UsuariosPage> {
     );
   }
 
-  List<Widget> _tableRows(List<UsuarioModel> usuarios) {
-    return usuarios.map(_tableRow).toList();
-  }
-
   Widget _table(List<UsuarioModel> usuarios) {
     return AppTable(
       rowsPerPage: 30,
       headers: _tableHeaders(),
-      rows: _tableRows(usuarios),
+      itemCount: usuarios.length,
+      rowBuilder: (index) => _tableRow(usuarios[index]),
     );
   }
 

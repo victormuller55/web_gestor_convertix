@@ -7,6 +7,8 @@ import 'package:web_gestor_site_covertix/app_config/const/covertix_colors.dart';
 import 'package:web_gestor_site_covertix/function/app_toast.dart';
 import 'package:web_gestor_site_covertix/function/date_format.dart';
 import 'package:web_gestor_site_covertix/function/link_helper.dart';
+import 'package:web_gestor_site_covertix/function/money_input_formatter.dart';
+import 'package:web_gestor_site_covertix/function/validators.dart';
 import 'package:web_gestor_site_covertix/models/app_enums.dart';
 import 'package:web_gestor_site_covertix/models/cliente_model.dart';
 import 'package:web_gestor_site_covertix/models/site_dominio_model.dart';
@@ -90,15 +92,18 @@ class _SitesCadastroState extends State<SitesCadastro> {
     _dominioController.addListener(_onDominioChanged);
 
     subdominioForm = _buildField(
-      hint: 'Subdomínio (opcional)',
+      hint: 'Subdomínio/slug (letras, números e hífen)',
       icon: Icons.link_outlined,
+      validator: (v) => validateSlug(v, field: 'Subdomínio'),
     );
 
     final info = widget.site.dominioInfo;
     valorDominioForm = _buildField(
       hint: 'Valor pago (opcional)',
       icon: Icons.payments_outlined,
-      textInputFormatter: AppFormFormatters.realFormatter,
+      textInputType: TextInputType.number,
+      textInputFormatter: const MoneyInputFormatter(),
+      validator: (v) => validateMoney(v, required: false),
     );
     dataCompraForm = _buildField(
       hint: 'Data compra (dd/mm/aaaa)',
@@ -154,6 +159,7 @@ class _SitesCadastroState extends State<SitesCadastro> {
     required IconData icon,
     String? Function(String?)? validator,
     TextInputFormatter? textInputFormatter,
+    TextInputType? textInputType,
   }) {
     return AppFormField(
       context: context,
@@ -162,11 +168,12 @@ class _SitesCadastroState extends State<SitesCadastro> {
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
       hoverBorderColor: ConvertixColors.primary,
-      backgroundColor: AppColors.grey100,
+      backgroundColor: ConvertixColors.inputFill,
       icon: Icon(icon, color: ConvertixColors.primary),
       hint: hint,
       validator: validator,
       textInputFormatter: textInputFormatter,
+      textInputType: textInputType,
     );
   }
 

@@ -125,7 +125,7 @@ Widget _animatedElevatedButton({
   if (primary) {
     if (isOutline) {
       return (
-        backgroundColor: AppColors.white,
+        backgroundColor: local.ConvertixColors.surface,
         textColor: local.ConvertixColors.buttonPrimary,
         borderColor: local.ConvertixColors.buttonPrimary,
         borderWidth: AppTheme.buttonBorderWidthHover,
@@ -134,7 +134,7 @@ Widget _animatedElevatedButton({
 
     return (
       backgroundColor: local.ConvertixColors.buttonPrimary,
-      textColor: AppColors.white,
+      textColor: local.ConvertixColors.white,
       borderColor: local.ConvertixColors.buttonPrimary,
       borderWidth: 0,
     );
@@ -142,7 +142,7 @@ Widget _animatedElevatedButton({
 
   if (isOutline) {
     return (
-      backgroundColor: AppColors.white,
+      backgroundColor: local.ConvertixColors.surface,
       textColor: local.ConvertixColors.buttonPrimary,
       borderColor: local.ConvertixColors.buttonPrimary,
       borderWidth: AppTheme.buttonBorderWidthHover,
@@ -150,7 +150,7 @@ Widget _animatedElevatedButton({
   }
 
   return (
-    backgroundColor: AppColors.white,
+    backgroundColor: local.ConvertixColors.surface,
     textColor: local.ConvertixColors.textPrimary,
     borderColor: local.ConvertixColors.border,
     borderWidth: AppTheme.inputBorderWidth,

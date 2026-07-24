@@ -30,20 +30,24 @@ class _AppTableRowState extends State<AppTableRow> {
   }
 }
 
-Widget appTableRow({required List<Widget> columns}) {
-  return AppTableRow(columns: columns);
+Widget appTableRow({Key? key, required List<Widget> columns}) {
+  return AppTableRow(key: key, columns: columns);
 }
+
+typedef AppTableRowBuilder = Widget Function(int index);
 
 class AppTable extends StatefulWidget {
   final List<Widget> headers;
-  final List<Widget> rows;
+  final int itemCount;
+  final AppTableRowBuilder rowBuilder;
   final int rowsPerPage;
   final bool expand;
 
   const AppTable({
     super.key,
     required this.headers,
-    required this.rows,
+    required this.itemCount,
+    required this.rowBuilder,
     this.rowsPerPage = 30,
     this.expand = true,
   });
@@ -55,6 +59,17 @@ class AppTable extends StatefulWidget {
 class _AppTableState extends State<AppTable> {
   final ValueNotifier<int> _currentPage = ValueNotifier(0);
   final ScrollController _horizontalScrollController = ScrollController();
+
+  @override
+  void didUpdateWidget(covariant AppTable oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final totalPages = widget.itemCount == 0
+        ? 1
+        : (widget.itemCount / widget.rowsPerPage).ceil();
+    if (_currentPage.value >= totalPages) {
+      _currentPage.value = (totalPages - 1).clamp(0, totalPages);
+    }
+  }
 
   @override
   void dispose() {
@@ -71,15 +86,18 @@ class _AppTableState extends State<AppTable> {
         final body = _tableBody(
           context: context,
           headers: widget.headers,
-          rows: widget.rows,
+          itemCount: widget.itemCount,
+          rowBuilder: widget.rowBuilder,
           rowsPerPage: widget.rowsPerPage,
           currentPage: currentPage,
           horizontalScrollController: _horizontalScrollController,
           onPageChanged: (page) => _currentPage.value = page,
         );
 
+        // Expanded só pode ser filho direto de Flex. Quando a página já envolve
+        // a tabela em Expanded (ex.: com ValueListenableBuilder no meio), use expand: false.
         if (widget.expand) return Expanded(child: body);
-        return body;
+        return SizedBox.expand(child: body);
       },
     );
   }
@@ -91,7 +109,7 @@ Widget _tableRowContent({required bool hover, required List<Widget> columns}) {
       color: hover
           ? ConvertixColors.primaryLight.withValues(alpha: 0.45)
           : ConvertixColors.surface,
-      border: const Border(
+      border: Border(
         bottom: BorderSide(color: ConvertixColors.border, width: 1),
       ),
     ),
@@ -102,17 +120,18 @@ Widget _tableRowContent({required bool hover, required List<Widget> columns}) {
 Widget _tableBody({
   required BuildContext context,
   required List<Widget> headers,
-  required List<Widget> rows,
+  required int itemCount,
+  required AppTableRowBuilder rowBuilder,
   required int rowsPerPage,
   required int currentPage,
   required ScrollController horizontalScrollController,
   required ValueChanged<int> onPageChanged,
 }) {
   final startIndex = currentPage * rowsPerPage;
-  final endIndex = (startIndex + rowsPerPage).clamp(0, rows.length);
-  final visibleRows = rows.sublist(startIndex, endIndex);
+  final endIndex = (startIndex + rowsPerPage).clamp(0, itemCount);
+  final visibleCount = (endIndex - startIndex).clamp(0, itemCount);
 
-  if (visibleRows.isEmpty) {
+  if (visibleCount <= 0) {
     return Column(children: [Expanded(child: _tableEmptyState())]);
   }
 
@@ -139,8 +158,10 @@ Widget _tableBody({
               ? _tableScrollableBody(
                   constraints: constraints,
                   headers: headers,
-                  visibleRows: visibleRows,
-                  rows: rows,
+                  itemCount: itemCount,
+                  startIndex: startIndex,
+                  visibleCount: visibleCount,
+                  rowBuilder: rowBuilder,
                   rowsPerPage: rowsPerPage,
                   currentPage: currentPage,
                   horizontalScrollController: horizontalScrollController,
@@ -148,8 +169,10 @@ Widget _tableBody({
                 )
               : _tableFixedBody(
                   headers: headers,
-                  visibleRows: visibleRows,
-                  rows: rows,
+                  itemCount: itemCount,
+                  startIndex: startIndex,
+                  visibleCount: visibleCount,
+                  rowBuilder: rowBuilder,
                   rowsPerPage: rowsPerPage,
                   currentPage: currentPage,
                   onPageChanged: onPageChanged,
@@ -162,8 +185,10 @@ Widget _tableBody({
 
 Widget _tableFixedBody({
   required List<Widget> headers,
-  required List<Widget> visibleRows,
-  required List<Widget> rows,
+  required int itemCount,
+  required int startIndex,
+  required int visibleCount,
+  required AppTableRowBuilder rowBuilder,
   required int rowsPerPage,
   required int currentPage,
   required ValueChanged<int> onPageChanged,
@@ -171,9 +196,14 @@ Widget _tableFixedBody({
   return Column(
     children: [
       _tableHeader(headers: headers, isScrollable: false),
-      Expanded(child: ListView(children: visibleRows)),
+      Expanded(
+        child: ListView.builder(
+          itemCount: visibleCount,
+          itemBuilder: (context, i) => rowBuilder(startIndex + i),
+        ),
+      ),
       _tablePaginationControls(
-        totalRows: rows.length,
+        totalRows: itemCount,
         rowsPerPage: rowsPerPage,
         currentPage: currentPage,
         onPageChanged: onPageChanged,
@@ -185,8 +215,10 @@ Widget _tableFixedBody({
 Widget _tableScrollableBody({
   required BoxConstraints constraints,
   required List<Widget> headers,
-  required List<Widget> visibleRows,
-  required List<Widget> rows,
+  required int itemCount,
+  required int startIndex,
+  required int visibleCount,
+  required AppTableRowBuilder rowBuilder,
   required int rowsPerPage,
   required int currentPage,
   required ScrollController horizontalScrollController,
@@ -206,7 +238,12 @@ Widget _tableScrollableBody({
             child: Column(
               children: [
                 _tableHeader(headers: headers, isScrollable: true),
-                Expanded(child: ListView(children: visibleRows)),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: visibleCount,
+                    itemBuilder: (context, i) => rowBuilder(startIndex + i),
+                  ),
+                ),
               ],
             ),
           ),
@@ -215,7 +252,7 @@ Widget _tableScrollableBody({
       if (needsHorizontalScroll)
         _tableHorizontalScrollBar(controller: horizontalScrollController),
       _tablePaginationControls(
-        totalRows: rows.length,
+        totalRows: itemCount,
         rowsPerPage: rowsPerPage,
         currentPage: currentPage,
         onPageChanged: onPageChanged,
@@ -320,7 +357,7 @@ Widget _tableHorizontalScrollBar({required ScrollController controller}) {
   return Container(
     height: 18,
     width: double.infinity,
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       color: ConvertixColors.background,
       border: Border(top: BorderSide(color: ConvertixColors.border)),
     ),
@@ -442,7 +479,7 @@ Widget _tablePaginationControls({
 
   return appContainer(
     backgroundColor: ConvertixColors.background,
-    border: const Border(top: BorderSide(color: ConvertixColors.border)),
+    border: Border(top: BorderSide(color: ConvertixColors.border)),
     child: Padding(
       padding: EdgeInsets.symmetric(
         horizontal: AppSpacing.normal,

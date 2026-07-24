@@ -5,6 +5,7 @@ import 'package:muller_package/muller_package.dart';
 import 'package:web_gestor_site_covertix/app_config/const/app_theme.dart';
 import 'package:web_gestor_site_covertix/app_config/const/covertix_colors.dart';
 import 'package:web_gestor_site_covertix/function/app_toast.dart';
+import 'package:web_gestor_site_covertix/function/validators.dart';
 import 'package:web_gestor_site_covertix/models/app_enums.dart';
 import 'package:web_gestor_site_covertix/models/biolink_model.dart';
 import 'package:web_gestor_site_covertix/models/site_model.dart';
@@ -63,9 +64,9 @@ class _BiolinksCadastroState extends State<BiolinksCadastro> {
 
   void _initForms() {
     nomeUsuarioForm = _buildField(
-      hint: 'Nome de usuário (ex: @marca)',
+      hint: 'Nome de usuário (3–50: letras, números, . _ -)',
       icon: Icons.alternate_email_outlined,
-      validator: (v) => validateNotEmpty(v, 'Nome de usuário'),
+      validator: validateNomeUsuarioBioLink,
     );
     descricaoForm = _buildField(
       hint: 'Descrição (opcional)',
@@ -119,7 +120,7 @@ class _BiolinksCadastroState extends State<BiolinksCadastro> {
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
       hoverBorderColor: ConvertixColors.primary,
-      backgroundColor: AppColors.grey100,
+      backgroundColor: ConvertixColors.inputFill,
       icon: Icon(icon, color: ConvertixColors.primary),
       hint: hint,
       validator: validator,
@@ -210,7 +211,7 @@ class _BiolinksCadastroState extends State<BiolinksCadastro> {
     final biolink = BioLinkModel(
       id: widget.biolink.id,
       siteId: _siteIdSelecionado,
-      nomeUsuario: nomeUsuarioForm.value.trim(),
+      nomeUsuario: normalizeNomeUsuarioBioLink(nomeUsuarioForm.value),
       descricao: descricaoForm.value.trim(),
       fotoPerfil: widget.biolink.fotoPerfil,
     );

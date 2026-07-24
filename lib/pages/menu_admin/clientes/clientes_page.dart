@@ -5,6 +5,7 @@ import 'package:muller_package/muller_package.dart';
 import 'package:web_gestor_site_covertix/app_config/const/app_theme.dart';
 import 'package:web_gestor_site_covertix/app_config/const/covertix_colors.dart';
 import 'package:web_gestor_site_covertix/function/app_toast.dart';
+import 'package:web_gestor_site_covertix/function/debounce.dart';
 import 'package:web_gestor_site_covertix/models/cliente_model.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/clientes/clientes_bloc.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/clientes/clientes_cadastro.dart';
@@ -32,6 +33,7 @@ class _ClientesPageState extends State<ClientesPage> {
   late List<ClienteModel> _allClientes;
   late ValueNotifier<List<ClienteModel>> _clientesNotifier;
   final ValueNotifier<bool> _isReloading = ValueNotifier(false);
+  final Debouncer _buscaDebouncer = Debouncer();
 
   static const _fotoFlex = 0.25;
   static const _empresaFlex = 0.7;
@@ -51,6 +53,7 @@ class _ClientesPageState extends State<ClientesPage> {
 
   @override
   void dispose() {
+    _buscaDebouncer.dispose();
     _formSearch.controller.dispose();
     _clientesNotifier.dispose();
     _isReloading.dispose();
@@ -80,7 +83,7 @@ class _ClientesPageState extends State<ClientesPage> {
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
       hoverBorderColor: ConvertixColors.primary,
-      backgroundColor: AppColors.grey100,
+      backgroundColor: ConvertixColors.inputFill,
       icon: const Icon(Icons.search, color: ConvertixColors.primary),
       hint: AppStrings.digiteAlgoParaPesquisar,
       onChange: _search,
@@ -97,18 +100,20 @@ class _ClientesPageState extends State<ClientesPage> {
   }
 
   void _search(String termo) {
-    termo = termo.toLowerCase();
-    final filtrados = _allClientes.where((c) {
-      final empresa = c.nomeEmpresa?.toLowerCase() ?? '';
-      final documento = c.documento?.toLowerCase() ?? '';
-      final email = c.email?.toLowerCase() ?? '';
-      final telefone = c.telefone?.toLowerCase() ?? '';
-      return empresa.contains(termo) ||
-          documento.contains(termo) ||
-          email.contains(termo) ||
-          telefone.contains(termo);
-    }).toList();
-    _clientesNotifier.value = filtrados;
+    _buscaDebouncer.run(() {
+      final q = termo.toLowerCase();
+      final filtrados = _allClientes.where((c) {
+        final empresa = c.nomeEmpresa?.toLowerCase() ?? '';
+        final documento = c.documento?.toLowerCase() ?? '';
+        final email = c.email?.toLowerCase() ?? '';
+        final telefone = c.telefone?.toLowerCase() ?? '';
+        return empresa.contains(q) ||
+            documento.contains(q) ||
+            email.contains(q) ||
+            telefone.contains(q);
+      }).toList();
+      _clientesNotifier.value = filtrados;
+    });
   }
 
   void _onChangeState(ClientesState state) {
@@ -136,12 +141,12 @@ class _ClientesPageState extends State<ClientesPage> {
   void _onCadastrarNovo() => _abrirCadastro();
 
   Future<void> _abrirCadastro({ClienteModel? cliente}) async {
-    await showDialog<bool>(
+    final salvo = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (_) => _cadastroDialog(cliente),
     );
-    _loadData();
+    if (salvo == true) _loadData(forceRefresh: true);
   }
 
   void _onEditarCliente(ClienteModel cliente) {
@@ -267,7 +272,7 @@ class _ClientesPageState extends State<ClientesPage> {
     return PopupMenuButton(
       icon: Icon(Icons.more_vert, color: ConvertixColors.textSecondary, size: 20),
       iconSize: 20,
-      color: AppColors.white,
+      color: ConvertixColors.surface,
       padding: EdgeInsets.zero,
       menuPadding: EdgeInsets.zero,
       itemBuilder: (_) => _popupMenuItems(cliente),
@@ -332,15 +337,12 @@ class _ClientesPageState extends State<ClientesPage> {
     );
   }
 
-  List<Widget> _tableRows(List<ClienteModel> clientes) {
-    return clientes.map(_tableRow).toList();
-  }
-
   Widget _table(List<ClienteModel> clientes) {
     return AppTable(
       rowsPerPage: 30,
       headers: _tableHeaders(),
-      rows: _tableRows(clientes),
+      itemCount: clientes.length,
+      rowBuilder: (index) => _tableRow(clientes[index]),
     );
   }
 

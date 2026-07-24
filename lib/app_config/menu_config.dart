@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:web_gestor_site_covertix/models/app_enums.dart';
+import 'package:web_gestor_site_covertix/pages/menu_admin/assinaturas/assinaturas_page.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/biolinks/biolinks_page.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/clientes/clientes_page.dart';
+import 'package:web_gestor_site_covertix/pages/menu_admin/financeiro/financeiro_page.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/inicio/inicio_page.dart';
+import 'package:web_gestor_site_covertix/pages/menu_admin/pagamentos/pagamentos_page.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/sites/sites_page.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/usuarios/usuarios_page.dart';
+
+typedef MenuPageBuilder = Widget Function();
 
 class MenuItem {
   final String id;
   final String title;
   final IconData icon;
-  final Widget page;
+  final MenuPageBuilder pageBuilder;
   final List<String> tiposPermitidos;
   final List<String>? requerSiteTiposCliente;
 
@@ -18,7 +23,7 @@ class MenuItem {
     required this.id,
     required this.title,
     required this.icon,
-    required this.page,
+    required this.pageBuilder,
     this.tiposPermitidos = const [],
     this.requerSiteTiposCliente,
   });
@@ -43,42 +48,68 @@ class MenuItem {
 }
 
 class MenuConfig {
-  static const List<MenuItem> todosOsItens = [
-    MenuItem(id: 'inicio', title: 'Início', icon: Icons.home_outlined, page: InicioPage()),
+  static final List<MenuItem> todosOsItens = [
+    MenuItem(
+      id: 'inicio',
+      title: 'Início',
+      icon: Icons.home_outlined,
+      pageBuilder: () => const InicioPage(),
+    ),
     MenuItem(
       id: 'usuarios',
       title: 'Usuários',
       icon: Icons.admin_panel_settings_outlined,
-      page: UsuariosPage(),
-      tiposPermitidos: [TipoUsuario.admin],
+      pageBuilder: () => const UsuariosPage(),
+      tiposPermitidos: const [TipoUsuario.admin],
     ),
     MenuItem(
       id: 'clientes',
       title: 'Clientes',
       icon: Icons.business_outlined,
-      page: ClientesPage(),
-      tiposPermitidos: [TipoUsuario.admin],
+      pageBuilder: () => const ClientesPage(),
+      tiposPermitidos: const [TipoUsuario.admin],
     ),
     MenuItem(
       id: 'sites',
       title: 'Sites',
       icon: Icons.language_outlined,
-      page: SitesPage(),
-      tiposPermitidos: [TipoUsuario.admin],
+      pageBuilder: () => const SitesPage(),
+      tiposPermitidos: const [TipoUsuario.admin],
     ),
     MenuItem(
       id: 'biolinks',
       title: 'BioLinks',
       icon: Icons.link_outlined,
-      page: BioLinksPage(),
-      tiposPermitidos: [TipoUsuario.admin],
+      pageBuilder: () => const BioLinksPage(),
+      tiposPermitidos: const [TipoUsuario.admin],
     ),
     MenuItem(
       id: 'biolink',
       title: 'BioLink',
       icon: Icons.link_outlined,
-      page: BioLinksPage(tituloPagina: 'BioLink'),
-      tiposPermitidos: [TipoUsuario.cliente],
+      pageBuilder: () => const BioLinksPage(tituloPagina: 'BioLink'),
+      tiposPermitidos: const [TipoUsuario.cliente],
+    ),
+    MenuItem(
+      id: 'financeiro',
+      title: 'Financeiro',
+      icon: Icons.account_balance_wallet_outlined,
+      pageBuilder: () => const FinanceiroPage(),
+      tiposPermitidos: const [TipoUsuario.admin, TipoUsuario.cliente],
+    ),
+    MenuItem(
+      id: 'pagamentos',
+      title: 'Pagamentos e Faturas',
+      icon: Icons.receipt_long_outlined,
+      pageBuilder: () => const PagamentosPage(hideBackIcon: true),
+      tiposPermitidos: const [TipoUsuario.admin, TipoUsuario.cliente],
+    ),
+    MenuItem(
+      id: 'assinaturas',
+      title: 'Assinaturas',
+      icon: Icons.autorenew_outlined,
+      pageBuilder: () => const AssinaturasPage(hideBackIcon: true),
+      tiposPermitidos: const [TipoUsuario.admin, TipoUsuario.cliente],
     ),
   ];
 

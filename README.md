@@ -55,17 +55,23 @@ muller_package:
 
 ### Web (desenvolvimento)
 
+A API libera CORS apenas para as portas **3000**, **5173** e **8080**. Use uma delas:
+
 ```bash
-flutter run -d chrome
+flutter run -d chrome --web-port 3000
 ```
 
 ### Web (build de produção)
+
+O front de produção deve ser servido em `https://gestor.convertix.net.br`.
 
 ```bash
 flutter build web
 ```
 
 Os arquivos gerados ficam em `build/web/`. Sirva essa pasta com qualquer servidor estático (Nginx, Apache, Firebase Hosting, etc.).
+
+> Swagger da API não está disponível em produção. Use o ambiente local ou a documentação do repositório da API.
 
 ## API
 

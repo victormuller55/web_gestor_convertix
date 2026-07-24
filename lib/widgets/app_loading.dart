@@ -8,6 +8,5 @@ Widget appLoadingCovertix() {
 Widget _loadingIndicator() {
   return const CircularProgressIndicator(
     color: ConvertixColors.primary,
-    strokeWidth: 2.5,
   );
 }

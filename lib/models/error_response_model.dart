@@ -6,6 +6,7 @@ class ErrorResponseModel {
   String? error;
   String? message;
   Map<String, String>? errors;
+  int? retryAfterSeconds;
 
   ErrorResponseModel({
     this.timestamp,
@@ -13,21 +14,28 @@ class ErrorResponseModel {
     this.error,
     this.message,
     this.errors,
+    this.retryAfterSeconds,
   });
 
-  ErrorResponseModel.fromMap(Map<String, dynamic> json) {
+  ErrorResponseModel.fromMap(
+    Map<String, dynamic> json, {
+    Map<String, String>? headers,
+  }) {
     timestamp = json['timestamp'] != null
         ? DateTime.tryParse(json['timestamp'].toString())
         : null;
-    status = json['status'];
-    error = json['error'];
-    message = json['message'];
+    status = json['status'] is int
+        ? json['status'] as int
+        : int.tryParse('${json['status'] ?? ''}');
+    error = json['error']?.toString();
+    message = json['message']?.toString();
     final rawErrors = json['errors'];
     if (rawErrors is Map) {
       errors = rawErrors.map(
         (key, value) => MapEntry(key.toString(), value.toString()),
       );
     }
+    retryAfterSeconds = _parseRetryAfter(headers);
   }
 
   ErrorModel toErrorModel() {
@@ -37,8 +45,15 @@ class ErrorResponseModel {
     }
     return ErrorModel(
       mensagem: mensagem,
-      erro: error ?? '',
+      erro: retryAfterSeconds?.toString() ?? error ?? '',
       tipo: status?.toString() ?? '',
     );
   }
+}
+
+int? _parseRetryAfter(Map<String, String>? headers) {
+  if (headers == null || headers.isEmpty) return null;
+  final raw = headers['retry-after'] ?? headers['Retry-After'];
+  if (raw == null || raw.trim().isEmpty) return null;
+  return int.tryParse(raw.trim());
 }

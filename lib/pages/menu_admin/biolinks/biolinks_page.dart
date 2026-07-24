@@ -6,6 +6,7 @@ import 'package:web_gestor_site_covertix/app_config/app_auth.dart';
 import 'package:web_gestor_site_covertix/app_config/const/app_theme.dart';
 import 'package:web_gestor_site_covertix/app_config/const/covertix_colors.dart';
 import 'package:web_gestor_site_covertix/function/app_toast.dart';
+import 'package:web_gestor_site_covertix/function/debounce.dart';
 import 'package:web_gestor_site_covertix/models/biolink_model.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/biolinks/biolinks_bloc.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/biolinks/biolinks_cadastro.dart';
@@ -37,6 +38,7 @@ class _BioLinksPageState extends State<BioLinksPage> {
   late ValueNotifier<List<BioLinkModel>> _biolinksNotifier;
   final ValueNotifier<bool> _isAdminNotifier = ValueNotifier(false);
   final ValueNotifier<bool> _isReloading = ValueNotifier(false);
+  final Debouncer _buscaDebouncer = Debouncer();
 
   String get _titulo => widget.tituloPagina ?? 'BioLinks';
 
@@ -58,6 +60,7 @@ class _BioLinksPageState extends State<BioLinksPage> {
 
   @override
   void dispose() {
+    _buscaDebouncer.dispose();
     _formSearch.controller.dispose();
     _biolinksNotifier.dispose();
     _isAdminNotifier.dispose();
@@ -88,7 +91,7 @@ class _BioLinksPageState extends State<BioLinksPage> {
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
       hoverBorderColor: ConvertixColors.primary,
-      backgroundColor: AppColors.grey100,
+      backgroundColor: ConvertixColors.inputFill,
       icon: const Icon(Icons.search, color: ConvertixColors.primary),
       hint: AppStrings.digiteAlgoParaPesquisar,
       onChange: _search,
@@ -105,18 +108,20 @@ class _BioLinksPageState extends State<BioLinksPage> {
   }
 
   void _search(String termo) {
-    termo = termo.toLowerCase();
-    final filtrados = _allBioLinks.where((b) {
-      final id = b.id?.toString() ?? '';
-      final site = b.siteNome?.toLowerCase() ?? '';
-      final usuario = b.nomeUsuario?.toLowerCase() ?? '';
-      final descricao = b.descricao?.toLowerCase() ?? '';
-      return id.contains(termo) ||
-          site.contains(termo) ||
-          usuario.contains(termo) ||
-          descricao.contains(termo);
-    }).toList();
-    _biolinksNotifier.value = filtrados;
+    _buscaDebouncer.run(() {
+      final q = termo.toLowerCase();
+      final filtrados = _allBioLinks.where((b) {
+        final id = b.id?.toString() ?? '';
+        final site = b.siteNome?.toLowerCase() ?? '';
+        final usuario = b.nomeUsuario?.toLowerCase() ?? '';
+        final descricao = b.descricao?.toLowerCase() ?? '';
+        return id.contains(q) ||
+            site.contains(q) ||
+            usuario.contains(q) ||
+            descricao.contains(q);
+      }).toList();
+      _biolinksNotifier.value = filtrados;
+    });
   }
 
   void _onChangeState(BiolinksState state) {
@@ -147,12 +152,12 @@ class _BioLinksPageState extends State<BioLinksPage> {
       showToastError(message: 'Apenas administradores podem cadastrar BioLinks.');
       return;
     }
-    await showDialog<bool>(
+    final salvo = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (_) => _cadastroDialog(biolink),
     );
-    _loadData(forceRefresh: true);
+    if (salvo == true) _loadData(forceRefresh: true);
   }
 
   Future<void> _abrirItens(BioLinkModel biolink) async {
@@ -325,7 +330,7 @@ class _BioLinksPageState extends State<BioLinksPage> {
     return PopupMenuButton(
       icon: Icon(Icons.more_vert, color: ConvertixColors.textSecondary, size: 20),
       iconSize: 20,
-      color: AppColors.white,
+      color: ConvertixColors.surface,
       padding: EdgeInsets.zero,
       menuPadding: EdgeInsets.zero,
       itemBuilder: (_) => _popupMenuItems(biolink, isAdmin),
@@ -388,15 +393,12 @@ class _BioLinksPageState extends State<BioLinksPage> {
     );
   }
 
-  List<Widget> _tableRows(List<BioLinkModel> biolinks, bool isAdmin) {
-    return biolinks.map((b) => _tableRow(b, isAdmin)).toList();
-  }
-
   Widget _table(List<BioLinkModel> biolinks, bool isAdmin) {
     return AppTable(
       rowsPerPage: 30,
       headers: _tableHeaders(),
-      rows: _tableRows(biolinks, isAdmin),
+      itemCount: biolinks.length,
+      rowBuilder: (index) => _tableRow(biolinks[index], isAdmin),
     );
   }
 

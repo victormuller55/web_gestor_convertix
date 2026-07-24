@@ -70,16 +70,13 @@ class _UsuariosCadastroState extends State<UsuariosCadastro> {
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
       hoverBorderColor: ConvertixColors.primary,
-      backgroundColor: AppColors.grey100,
+      backgroundColor: ConvertixColors.inputFill,
       icon: const Icon(Icons.lock_outline, color: ConvertixColors.primary),
-      hint: _isEditMode ? 'Nova senha (opcional)' : AppStrings.digiteSuaSenha,
+      hint: _isEditMode
+          ? 'Nova senha (opcional, mín. 8 caracteres)'
+          : 'Senha (mín. 8 caracteres)',
       showContent: false,
-      validator: (value) {
-        if (!_isEditMode && (value == null || value.trim().isEmpty)) {
-          return 'Senha é obrigatória';
-        }
-        return null;
-      },
+      validator: (value) => validateSenha(value, required: !_isEditMode),
     );
 
     nomeForm.controller.text = widget.usuario.nome ?? '';
@@ -98,7 +95,7 @@ class _UsuariosCadastroState extends State<UsuariosCadastro> {
       radius: AppTheme.radiusInput,
       borderColor: ConvertixColors.border,
       hoverBorderColor: ConvertixColors.primary,
-      backgroundColor: AppColors.grey100,
+      backgroundColor: ConvertixColors.inputFill,
       icon: Icon(icon, color: ConvertixColors.primary),
       hint: hint,
       validator: validator,

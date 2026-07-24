@@ -10,6 +10,7 @@ class SiteModel {
   String? dominio;
   String? subdominio;
   String? status;
+  String? situacaoAssinatura;
   SiteDominioModel? dominioInfo;
   DateTime? createdAt;
   DateTime? updatedAt;
@@ -24,6 +25,7 @@ class SiteModel {
     this.dominio,
     this.subdominio,
     this.status,
+    this.situacaoAssinatura,
     this.dominioInfo,
     this.createdAt,
     this.updatedAt,
@@ -39,6 +41,7 @@ class SiteModel {
       dominio: '',
       subdominio: '',
       status: StatusSite.ativo,
+      situacaoAssinatura: SituacaoAssinaturaSite.desativado,
       dominioInfo: SiteDominioModel.empty(),
     );
   }
@@ -52,6 +55,7 @@ class SiteModel {
     dominio = json['dominio'];
     subdominio = json['subdominio'];
     status = json['status'];
+    situacaoAssinatura = json['situacao_assinatura']?.toString();
     final info = json['dominio_info'];
     dominioInfo = info is Map<String, dynamic>
         ? SiteDominioModel.fromMap(info)
@@ -113,6 +117,19 @@ class SiteModel {
         return 'Em desenvolvimento';
       default:
         return status ?? '—';
+    }
+  }
+
+  static String labelSituacaoAssinatura(String? situacao) {
+    switch (situacao) {
+      case SituacaoAssinaturaSite.emDia:
+        return 'Em dia';
+      case SituacaoAssinaturaSite.vencido:
+        return 'Vencido';
+      case SituacaoAssinaturaSite.desativado:
+        return 'Desativado';
+      default:
+        return situacao ?? '—';
     }
   }
 }
