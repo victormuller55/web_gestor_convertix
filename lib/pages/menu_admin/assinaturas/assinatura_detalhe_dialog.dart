@@ -25,7 +25,8 @@ class AssinaturaDetalheDialog extends StatefulWidget {
   const AssinaturaDetalheDialog({super.key, required this.assinaturaId});
 
   @override
-  State<AssinaturaDetalheDialog> createState() => _AssinaturaDetalheDialogState();
+  State<AssinaturaDetalheDialog> createState() =>
+      _AssinaturaDetalheDialogState();
 }
 
 class _AssinaturaDetalheDialogState extends State<AssinaturaDetalheDialog> {
@@ -97,12 +98,13 @@ class _AssinaturaDetalheDialogState extends State<AssinaturaDetalheDialog> {
       builder: (context, state) {
         final loading = state is AssinaturasLoadingState && _assinatura == null;
         return ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640, maxHeight: 760),
+          constraints: const BoxConstraints(maxWidth: 520, maxHeight: 720),
           child: Material(
             color: ConvertixColors.surface,
             borderRadius: BorderRadius.circular(AppTheme.radiusCard),
             clipBehavior: Clip.antiAlias,
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 appDialogHeader(
                   title: 'Detalhe da assinatura',
@@ -110,14 +112,17 @@ class _AssinaturaDetalheDialogState extends State<AssinaturaDetalheDialog> {
                   subtitle: _assinatura?.descricao,
                   onClose: () => Navigator.of(context).pop(),
                 ),
-                Expanded(
+                Flexible(
                   child: loading
-                      ? appLoadingCovertix()
+                      ? SizedBox(height: 180, child: appLoadingCovertix())
                       : _assinatura == null
-                          ? Center(
-                              child: appText(
-                                'Assinatura não encontrada',
-                                color: ConvertixColors.textMuted,
+                          ? Padding(
+                              padding: EdgeInsets.all(AppSpacing.medium),
+                              child: Center(
+                                child: appText(
+                                  'Assinatura não encontrada',
+                                  color: ConvertixColors.textMuted,
+                                ),
                               ),
                             )
                           : _content(_assinatura!),
@@ -131,70 +136,231 @@ class _AssinaturaDetalheDialogState extends State<AssinaturaDetalheDialog> {
   }
 
   Widget _content(AssinaturaModel a) {
+    final podeCancelar = _isAdmin && a.status == StatusAssinatura.active;
+
     return SingleChildScrollView(
       padding: EdgeInsets.all(AppSpacing.medium),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            children: [
-              financeiroStatusChip(a.status, assinatura: true),
-              const Spacer(),
-              appText(
-                a.valor == null ? '—' : formataDinheiro(a.valor!),
-                bold: true,
-                color: ConvertixColors.textPrimary,
-              ),
-            ],
-          ),
+          _resumoCard(a),
           appSizedBox(height: AppSpacing.medium),
-          _info('Ciclo', labelCicloAssinatura(a.ciclo)),
-          _info('Forma', labelFormaPagamento(a.formaPagamento)),
-          _info('Cliente', a.clienteNomeEmpresa ?? '—'),
-          _info('Produto', labelProdutoAssinatura(a)),
-          _info(
-            'Site',
-            (a.siteNome == null || a.siteNome!.trim().isEmpty)
-                ? '—'
-                : a.siteNome!.trim(),
-          ),
-          _info('Próxima cobrança', formatDateTable(a.proximaCobranca)),
-          _info('Código Asaas', a.asaasSubscriptionId ?? '—'),
-          if (_isAdmin && a.status == StatusAssinatura.active) ...[
+          _detalhesCard(a),
+          appSizedBox(height: AppSpacing.medium),
+          _cobrancasSection(a),
+          if (podeCancelar) ...[
+            appSizedBox(height: AppSpacing.medium),
+            appText(
+              'Ações',
+              bold: true,
+              color: ConvertixColors.textPrimary,
+            ),
             appSizedBox(height: AppSpacing.normal),
-            appElevatedButtonCovertixTransparent(
+            appElevatedButtonCovertix(
               title: 'Cancelar assinatura',
               height: 44,
+              color: ConvertixColors.error,
+              invertedStyle: true,
               onTap: _cancelar,
             ),
           ],
-          appSizedBox(height: AppSpacing.medium),
-          appText(
-            'Cobranças',
-            bold: true,
-            color: ConvertixColors.textPrimary,
-          ),
-          appSizedBox(height: AppSpacing.normal),
-          if (a.cobrancas.isEmpty)
-            appText('Nenhuma cobrança registrada.', color: ConvertixColors.textMuted)
-          else
-            ...a.cobrancas.map(_cobrancaItem),
         ],
       ),
     );
   }
 
-  Widget _info(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
+  Widget _resumoCard(AssinaturaModel a) {
+    return appContainer(
+      width: double.infinity,
+      padding: EdgeInsets.all(AppSpacing.medium),
+      backgroundColor: ConvertixColors.background,
+      radius: BorderRadius.circular(AppTheme.radiusInput),
+      border: Border.all(color: ConvertixColors.border),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 150,
-            child: appText(label, color: ConvertixColors.textMuted),
+          Row(
+            children: [
+              financeiroStatusChip(a.status, assinatura: true),
+              const Spacer(),
+              Icon(
+                Icons.autorenew_outlined,
+                size: 18,
+                color: ConvertixColors.textMuted,
+              ),
+            ],
           ),
+          appSizedBox(height: AppSpacing.normal),
+          appText(
+            'Valor',
+            color: ConvertixColors.textMuted,
+            fontSize: AppFontSizes.verySmall,
+          ),
+          appSizedBox(height: 4),
+          appText(
+            a.valor == null ? '—' : formataDinheiro(a.valor!),
+            bold: true,
+            fontSize: AppFontSizes.medium,
+            color: ConvertixColors.textPrimary,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detalhesCard(AssinaturaModel a) {
+    final siteNome = (a.siteNome == null || a.siteNome!.trim().isEmpty)
+        ? '—'
+        : a.siteNome!.trim();
+
+    return appContainer(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.medium,
+        vertical: AppSpacing.normal,
+      ),
+      backgroundColor: ConvertixColors.surface,
+      radius: BorderRadius.circular(AppTheme.radiusInput),
+      border: Border.all(color: ConvertixColors.border),
+      child: Column(
+        children: [
+          _infoRow(
+            icon: Icons.repeat_outlined,
+            label: 'Ciclo',
+            value: labelCicloAssinatura(a.ciclo),
+          ),
+          _divider(),
+          _infoRow(
+            icon: Icons.credit_card_outlined,
+            label: 'Forma',
+            value: labelFormaPagamento(a.formaPagamento),
+          ),
+          _divider(),
+          _infoRow(
+            icon: Icons.person_outline,
+            label: 'Cliente',
+            value: a.clienteNomeEmpresa ?? '—',
+          ),
+          _divider(),
+          _infoRow(
+            icon: Icons.inventory_2_outlined,
+            label: 'Produto',
+            value: labelProdutoAssinatura(a),
+          ),
+          _divider(),
+          _infoRow(
+            icon: Icons.language_outlined,
+            label: 'Site',
+            value: siteNome,
+          ),
+          _divider(),
+          _infoRow(
+            icon: Icons.event_outlined,
+            label: 'Próxima cobrança',
+            value: formatDateTable(a.proximaCobranca),
+          ),
+          _divider(),
+          _infoRow(
+            icon: Icons.tag_outlined,
+            label: 'Código Asaas',
+            value: a.asaasSubscriptionId ?? '—',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cobrancasSection(AssinaturaModel a) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            appText(
+              'Cobranças',
+              bold: true,
+              color: ConvertixColors.textPrimary,
+            ),
+            const Spacer(),
+            if (a.cobrancas.isNotEmpty)
+              appContainer(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                backgroundColor: ConvertixColors.primaryLight,
+                radius: BorderRadius.circular(AppTheme.radiusPill),
+                child: appText(
+                  '${a.cobrancas.length}',
+                  bold: true,
+                  fontSize: AppFontSizes.verySmall,
+                  color: ConvertixColors.primary,
+                ),
+              ),
+          ],
+        ),
+        appSizedBox(height: AppSpacing.normal),
+        if (a.cobrancas.isEmpty)
+          appContainer(
+            width: double.infinity,
+            padding: EdgeInsets.all(AppSpacing.medium),
+            backgroundColor: ConvertixColors.background,
+            radius: BorderRadius.circular(AppTheme.radiusInput),
+            border: Border.all(color: ConvertixColors.border),
+            child: appText(
+              'Nenhuma cobrança registrada.',
+              color: ConvertixColors.textMuted,
+            ),
+          )
+        else
+          ...a.cobrancas.map(_cobrancaItem),
+      ],
+    );
+  }
+
+  Widget _divider() {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      color: ConvertixColors.border.withValues(alpha: 0.8),
+    );
+  }
+
+  Widget _infoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.normal),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: ConvertixColors.primaryLight,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 16, color: ConvertixColors.primary),
+          ),
+          appSizedBox(width: AppSpacing.normal),
           Expanded(
-            child: appText(value, color: ConvertixColors.textPrimary, bold: true),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                appText(
+                  label,
+                  color: ConvertixColors.textMuted,
+                  fontSize: AppFontSizes.verySmall,
+                ),
+                appSizedBox(height: 2),
+                appText(
+                  value,
+                  bold: true,
+                  color: ConvertixColors.textPrimary,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -211,6 +377,20 @@ class _AssinaturaDetalheDialogState extends State<AssinaturaDetalheDialog> {
         border: Border.all(color: ConvertixColors.border),
         child: Row(
           children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: ConvertixColors.primaryLight,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.receipt_long_outlined,
+                size: 18,
+                color: ConvertixColors.primary,
+              ),
+            ),
+            appSizedBox(width: AppSpacing.normal),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,6 +400,7 @@ class _AssinaturaDetalheDialogState extends State<AssinaturaDetalheDialog> {
                     bold: true,
                     color: ConvertixColors.textPrimary,
                   ),
+                  appSizedBox(height: 2),
                   appText(
                     formatDateTable(p.createdAt),
                     color: ConvertixColors.textMuted,
@@ -234,6 +415,7 @@ class _AssinaturaDetalheDialogState extends State<AssinaturaDetalheDialog> {
                 appText(
                   p.valor == null ? '—' : formataDinheiro(p.valor!),
                   bold: true,
+                  color: ConvertixColors.textPrimary,
                 ),
                 appSizedBox(height: 4),
                 financeiroStatusChip(p.status),

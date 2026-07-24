@@ -1,4 +1,5 @@
 import 'package:muller_package/muller_package.dart';
+import 'package:web_gestor_site_covertix/function/date_format.dart';
 
 class ErrorResponseModel {
   DateTime? timestamp;
@@ -21,9 +22,7 @@ class ErrorResponseModel {
     Map<String, dynamic> json, {
     Map<String, String>? headers,
   }) {
-    timestamp = json['timestamp'] != null
-        ? DateTime.tryParse(json['timestamp'].toString())
-        : null;
+    timestamp = parseApiDateTime(json['timestamp']);
     status = json['status'] is int
         ? json['status'] as int
         : int.tryParse('${json['status'] ?? ''}');

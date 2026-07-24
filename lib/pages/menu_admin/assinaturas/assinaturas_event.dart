@@ -1,10 +1,17 @@
+import 'package:web_gestor_site_covertix/models/page_response.dart';
+
 abstract class AssinaturasEvent {}
 
 class AssinaturasLoadEvent extends AssinaturasEvent {
-  final bool forceRefresh;
   final String? status;
+  final int page;
+  final int size;
 
-  AssinaturasLoadEvent({this.forceRefresh = false, this.status});
+  AssinaturasLoadEvent({
+    this.status,
+    this.page = 0,
+    this.size = PageResponse.defaultSize,
+  });
 }
 
 class AssinaturasCreateEvent extends AssinaturasEvent {

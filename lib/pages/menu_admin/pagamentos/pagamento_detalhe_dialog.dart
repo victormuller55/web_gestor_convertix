@@ -73,8 +73,13 @@ class _PagamentoDetalheDialogState extends State<PagamentoDetalheDialog> {
       _pagamento.value = state.pagamento;
       _loading.value = false;
       _alterado = true;
+      showToastSuccess(message: 'Status atualizado');
     }
     if (state is PagamentosErrorState) {
+      _loading.value = false;
+      showToastError(message: state.errorModel.mensagem);
+    }
+    if (state is PagamentosSaveErrorState) {
       _loading.value = false;
       showToastError(message: state.errorModel.mensagem);
     }
@@ -145,15 +150,17 @@ class _PagamentoDetalheDialogState extends State<PagamentoDetalheDialog> {
           curr is PagamentosActionSuccessState ||
           curr is PagamentosStatusUpdatedState ||
           curr is PagamentosErrorState ||
+          curr is PagamentosSaveErrorState ||
           curr is PagamentosLoadingState,
       listener: (_, state) => _onState(state),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 620, maxHeight: 760),
+        constraints: const BoxConstraints(maxWidth: 480, maxHeight: 720),
         child: Material(
           color: ConvertixColors.surface,
           borderRadius: BorderRadius.circular(AppTheme.radiusCard),
           clipBehavior: Clip.antiAlias,
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               ValueListenableBuilder<PagamentoModel?>(
                 valueListenable: _pagamento,
@@ -164,19 +171,27 @@ class _PagamentoDetalheDialogState extends State<PagamentoDetalheDialog> {
                   onClose: _fechar,
                 ),
               ),
-              Expanded(
+              Flexible(
                 child: ValueListenableBuilder<bool>(
                   valueListenable: _loading,
                   builder: (_, loading, __) {
-                    if (loading) return appLoadingCovertix();
+                    if (loading) {
+                      return SizedBox(
+                        height: 180,
+                        child: appLoadingCovertix(),
+                      );
+                    }
                     return ValueListenableBuilder<PagamentoModel?>(
                       valueListenable: _pagamento,
                       builder: (_, p, __) {
                         if (p == null) {
-                          return Center(
-                            child: appText(
-                              'Pagamento não encontrado',
-                              color: ConvertixColors.textMuted,
+                          return Padding(
+                            padding: EdgeInsets.all(AppSpacing.medium),
+                            child: Center(
+                              child: appText(
+                                'Pagamento não encontrado',
+                                color: ConvertixColors.textMuted,
+                              ),
                             ),
                           );
                         }
@@ -194,92 +209,228 @@ class _PagamentoDetalheDialogState extends State<PagamentoDetalheDialog> {
   }
 
   Widget _content(PagamentoModel p) {
+    final temInvoice = p.invoiceUrl != null && p.invoiceUrl!.isNotEmpty;
+    final temPix = p.formaPagamento == FormaPagamento.pix &&
+        (p.qrCode != null || p.codigoPix != null);
+
     return SingleChildScrollView(
-      padding: EdgeInsets.all(AppSpacing.medium),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.medium,
+        AppSpacing.medium,
+        AppSpacing.medium,
+        AppSpacing.medium,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _resumoCard(p),
+          appSizedBox(height: AppSpacing.medium),
+          _detalhesCard(p),
+          appSizedBox(height: AppSpacing.medium),
+          _acoes(p, temInvoice: temInvoice, temPix: temPix),
+        ],
+      ),
+    );
+  }
+
+  Widget _resumoCard(PagamentoModel p) {
+    return appContainer(
+      width: double.infinity,
+      padding: EdgeInsets.all(AppSpacing.medium),
+      backgroundColor: ConvertixColors.background,
+      radius: BorderRadius.circular(AppTheme.radiusInput),
+      border: Border.all(color: ConvertixColors.border),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               financeiroStatusChip(p.status),
               const Spacer(),
-              appText(
-                p.valor == null ? '—' : formataDinheiro(p.valor!),
-                bold: true,
-                color: ConvertixColors.textPrimary,
+              Icon(
+                Icons.payments_outlined,
+                size: 18,
+                color: ConvertixColors.textMuted,
               ),
             ],
           ),
-          appSizedBox(height: AppSpacing.medium),
-          _info('Forma', labelFormaPagamento(p.formaPagamento)),
-          _info('Vencimento', formatDateTable(p.dataVencimento)),
-          _info(
-            'Mensagem',
-            labelMensagemPagamento(p.mensagemAsaas, status: p.status),
+          appSizedBox(height: AppSpacing.normal),
+          appText(
+            'Valor',
+            color: ConvertixColors.textMuted,
+            fontSize: AppFontSizes.verySmall,
           ),
-          if (p.invoiceUrl != null && p.invoiceUrl!.isNotEmpty) ...[
-            appSizedBox(height: AppSpacing.normal),
-            appElevatedButtonCovertix(
-              title: 'Ir para pagamento',
-              height: 44,
-              onTap: () => openExternalLink(p.invoiceUrl!),
-            ),
-          ],
-          if (p.formaPagamento == FormaPagamento.pix &&
-              (p.qrCode != null || p.codigoPix != null)) ...[
-            appSizedBox(height: AppSpacing.small),
-            appElevatedButtonCovertixTransparent(
-              title: 'Ver PIX',
-              height: 44,
-              onTap: _abrirPix,
-            ),
-          ],
-          ValueListenableBuilder<bool>(
-            valueListenable: _isAdmin,
-            builder: (_, isAdmin, __) {
-              if (!isAdmin) return const SizedBox.shrink();
-              return Column(
-                children: [
-                  if (StatusPagamento.podeCancelar(p.status)) ...[
-                    appSizedBox(height: AppSpacing.small),
-                    appElevatedButtonCovertixTransparent(
-                      title: 'Cancelar',
-                      height: 44,
-                      onTap: _cancelar,
-                    ),
-                  ],
-                  if (StatusPagamento.podeEstornar(p.status)) ...[
-                    appSizedBox(height: AppSpacing.small),
-                    appElevatedButtonCovertix(
-                      title: 'Estornar',
-                      height: 44,
-                      onTap: _estornar,
-                    ),
-                  ],
-                ],
-              );
-            },
+          appSizedBox(height: 4),
+          appText(
+            p.valor == null ? '—' : formataDinheiro(p.valor!),
+            bold: true,
+            fontSize: AppFontSizes.medium,
+            color: ConvertixColors.textPrimary,
           ),
         ],
       ),
     );
   }
 
-  Widget _info(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppSpacing.small),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _detalhesCard(PagamentoModel p) {
+    return appContainer(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.medium,
+        vertical: AppSpacing.normal,
+      ),
+      backgroundColor: ConvertixColors.surface,
+      radius: BorderRadius.circular(AppTheme.radiusInput),
+      border: Border.all(color: ConvertixColors.border),
+      child: Column(
         children: [
-          SizedBox(
-            width: 110,
-            child: appText(label, color: ConvertixColors.textMuted, bold: true),
+          _infoRow(
+            icon: Icons.credit_card_outlined,
+            label: 'Forma',
+            value: labelFormaPagamento(p.formaPagamento),
           ),
-          Expanded(
-            child: appText(value, color: ConvertixColors.textPrimary),
+          _divider(),
+          _infoRow(
+            icon: Icons.event_outlined,
+            label: 'Vencimento',
+            value: formatDateTable(p.dataVencimento),
+          ),
+          _divider(),
+          _infoRow(
+            icon: Icons.chat_bubble_outline,
+            label: 'Mensagem',
+            value: labelMensagemPagamento(p.mensagemAsaas, status: p.status),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _divider() {
+    return Divider(
+      height: 1,
+      thickness: 1,
+      color: ConvertixColors.border.withValues(alpha: 0.8),
+    );
+  }
+
+  Widget _infoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.normal),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: ConvertixColors.primaryLight,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, size: 16, color: ConvertixColors.primary),
+          ),
+          appSizedBox(width: AppSpacing.normal),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                appText(
+                  label,
+                  color: ConvertixColors.textMuted,
+                  fontSize: AppFontSizes.verySmall,
+                ),
+                appSizedBox(height: 2),
+                appText(
+                  value,
+                  bold: true,
+                  color: ConvertixColors.textPrimary,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _acoes(
+    PagamentoModel p, {
+    required bool temInvoice,
+    required bool temPix,
+  }) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: _isAdmin,
+      builder: (_, isAdmin, __) {
+        final podeCancelar = isAdmin && StatusPagamento.podeCancelar(p.status);
+        final podeEstornar = isAdmin && StatusPagamento.podeEstornar(p.status);
+        final temAcoes =
+            temInvoice || temPix || isAdmin || podeCancelar || podeEstornar;
+
+        if (!temAcoes) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            appText(
+              'Ações',
+              bold: true,
+              color: ConvertixColors.textPrimary,
+            ),
+            appSizedBox(height: AppSpacing.normal),
+            if (temInvoice) ...[
+              appElevatedButtonCovertix(
+                title: 'Ir para pagamento',
+                height: 44,
+                onTap: () => openExternalLink(p.invoiceUrl!),
+              ),
+              appSizedBox(height: AppSpacing.small),
+            ],
+            if (temPix) ...[
+              appElevatedButtonCovertixTransparent(
+                title: 'Ver PIX',
+                height: 44,
+                onTap: _abrirPix,
+              ),
+              appSizedBox(height: AppSpacing.small),
+            ],
+            if (isAdmin) ...[
+              appElevatedButtonCovertixTransparent(
+                title: 'Atualizar status',
+                height: 44,
+                onTap: () {
+                  if (p.id == null) return;
+                  _loading.value = true;
+                  bloc.add(
+                    PagamentosSincronizarStatusEvent(pagamentoId: p.id!),
+                  );
+                },
+              ),
+              appSizedBox(height: AppSpacing.small),
+            ],
+            if (podeCancelar) ...[
+              appElevatedButtonCovertixTransparent(
+                title: 'Cancelar',
+                height: 44,
+                onTap: _cancelar,
+              ),
+              appSizedBox(height: AppSpacing.small),
+            ],
+            if (podeEstornar)
+              appElevatedButtonCovertix(
+                title: 'Estornar',
+                height: 44,
+                color: ConvertixColors.error,
+                invertedStyle: true,
+                onTap: _estornar,
+              ),
+          ],
+        );
+      },
     );
   }
 }

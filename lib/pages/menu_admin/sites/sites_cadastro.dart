@@ -142,7 +142,7 @@ class _SitesCadastroState extends State<SitesCadastro> {
   Future<void> _carregarClientes() async {
     _carregandoClientesNotifier.value = true;
     try {
-      final clientes = await listarClientes();
+      final clientes = await listarClientesLookup();
       if (!mounted) return;
       _clientes = clientes;
       _carregandoClientesNotifier.value = false;

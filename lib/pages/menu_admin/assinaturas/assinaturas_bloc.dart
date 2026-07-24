@@ -9,11 +9,12 @@ class AssinaturasBloc extends Bloc<AssinaturasEvent, AssinaturasState> {
     on<AssinaturasLoadEvent>((event, emit) async {
       emit(AssinaturasLoadingState());
       try {
-        final assinaturas = await listarAssinaturas(
-          forceRefresh: event.forceRefresh,
+        final page = await listarAssinaturas(
           status: event.status,
+          page: event.page,
+          size: event.size,
         );
-        emit(AssinaturasSuccessState(assinaturas: assinaturas));
+        emit(AssinaturasSuccessState(page: page));
       } catch (e) {
         emit(AssinaturasErrorState(errorModel: parseApiError(e)));
       }

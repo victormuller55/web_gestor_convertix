@@ -1,28 +1,17 @@
 import 'dart:convert';
 
-import 'package:web_gestor_site_covertix/core/cache/cache_keys.dart';
-import 'package:web_gestor_site_covertix/core/cache/page_data_cache.dart';
 import 'package:web_gestor_site_covertix/models/pagamento_model.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/financeiro/financeiro_service.dart';
 import 'package:web_gestor_site_covertix/services/pagamento_service.dart';
 
-Future<List<PagamentoModel>> listarHistoricoPagamentos({
-  bool forceRefresh = false,
+Future<PagamentoPageModel> listarHistoricoPagamentos({
+  int page = 0,
+  int size = 30,
 }) async {
-  if (!forceRefresh) {
-    final cached = await PageDataCache.getJsonList(CacheKeys.pagamentosHistorico);
-    if (cached != null) {
-      return cached.map(PagamentoModel.fromMap).toList();
-    }
-  }
-
-  final response = await getPagamentosHistorico();
-  final list = jsonDecode(response.body) as List;
-  final maps = list
-      .map((item) => Map<String, dynamic>.from(item as Map))
-      .toList();
-  await PageDataCache.setJsonList(CacheKeys.pagamentosHistorico, maps);
-  return maps.map(PagamentoModel.fromMap).toList();
+  final response = await getPagamentosHistorico(page: page, size: size);
+  return PagamentoPageModel.fromMap(
+    Map<String, dynamic>.from(jsonDecode(response.body) as Map),
+  );
 }
 
 Future<PagamentoPageModel> listarPagamentos({

@@ -173,7 +173,7 @@ class PagamentoPageModel {
   PagamentoPageModel({
     this.content = const [],
     this.page = 0,
-    this.size = 20,
+    this.size = 30,
     this.totalElements = 0,
     this.totalPages = 0,
   });
@@ -181,11 +181,11 @@ class PagamentoPageModel {
   PagamentoPageModel.fromMap(Map<String, dynamic> json)
       : content = const [],
         page = 0,
-        size = 20,
+        size = 30,
         totalElements = 0,
         totalPages = 0 {
     page = json['page'] ?? 0;
-    size = json['size'] ?? 20;
+    size = json['size'] ?? 30;
     totalElements = json['total_elements'] ?? 0;
     totalPages = json['total_pages'] ?? 0;
     final raw = json['content'];

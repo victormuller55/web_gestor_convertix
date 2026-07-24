@@ -93,7 +93,7 @@ class _InicioPageState extends State<InicioPage> {
     }
 
     try {
-      final stats = await carregarDashboardStats(forceRefresh: forceRefresh);
+      final stats = await carregarDashboardStats();
       if (!mounted) return;
       _viewData.value = _viewData.value.copyWith(
         stats: stats,

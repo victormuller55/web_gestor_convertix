@@ -9,8 +9,12 @@ class SitesBloc extends Bloc<SitesEvent, SitesState> {
     on<SitesLoadEvent>((event, emit) async {
       emit(SitesLoadingState());
       try {
-        final sites = await listarSites(forceRefresh: event.forceRefresh);
-        emit(SitesSuccessState(sites: sites));
+        final page = await listarSites(
+          query: event.query,
+          page: event.page,
+          size: event.size,
+        );
+        emit(SitesSuccessState(page: page));
       } catch (e) {
         emit(SitesErrorState(errorModel: parseApiError(e)));
       }

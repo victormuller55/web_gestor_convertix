@@ -43,6 +43,14 @@ class AppTable extends StatefulWidget {
   final int rowsPerPage;
   final bool expand;
 
+  /// Quando informados, a paginação é controlada pelo servidor:
+  /// [itemCount] = itens da página atual; [totalElements]/[totalPages]/[page]
+  /// vêm da API (page base 0).
+  final int? totalElements;
+  final int? totalPages;
+  final int? page;
+  final ValueChanged<int>? onPageChanged;
+
   const AppTable({
     super.key,
     required this.headers,
@@ -50,7 +58,14 @@ class AppTable extends StatefulWidget {
     required this.rowBuilder,
     this.rowsPerPage = 30,
     this.expand = true,
+    this.totalElements,
+    this.totalPages,
+    this.page,
+    this.onPageChanged,
   });
+
+  bool get isServerSide =>
+      totalElements != null && totalPages != null && page != null;
 
   @override
   State<AppTable> createState() => _AppTableState();
@@ -63,6 +78,7 @@ class _AppTableState extends State<AppTable> {
   @override
   void didUpdateWidget(covariant AppTable oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.isServerSide) return;
     final totalPages = widget.itemCount == 0
         ? 1
         : (widget.itemCount / widget.rowsPerPage).ceil();
@@ -80,6 +96,24 @@ class _AppTableState extends State<AppTable> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.isServerSide) {
+      final body = _tableBody(
+        context: context,
+        headers: widget.headers,
+        itemCount: widget.itemCount,
+        rowBuilder: widget.rowBuilder,
+        rowsPerPage: widget.rowsPerPage,
+        currentPage: widget.page!,
+        horizontalScrollController: _horizontalScrollController,
+        onPageChanged: widget.onPageChanged ?? (_) {},
+        serverSide: true,
+        totalElements: widget.totalElements!,
+        totalPages: widget.totalPages!,
+      );
+      if (widget.expand) return Expanded(child: body);
+      return SizedBox.expand(child: body);
+    }
+
     return ValueListenableBuilder<int>(
       valueListenable: _currentPage,
       builder: (context, currentPage, _) {
@@ -126,14 +160,26 @@ Widget _tableBody({
   required int currentPage,
   required ScrollController horizontalScrollController,
   required ValueChanged<int> onPageChanged,
+  bool serverSide = false,
+  int? totalElements,
+  int? totalPages,
 }) {
-  final startIndex = currentPage * rowsPerPage;
-  final endIndex = (startIndex + rowsPerPage).clamp(0, itemCount);
-  final visibleCount = (endIndex - startIndex).clamp(0, itemCount);
+  final startIndex = serverSide ? 0 : currentPage * rowsPerPage;
+  final endIndex = serverSide
+      ? itemCount
+      : (startIndex + rowsPerPage).clamp(0, itemCount);
+  final visibleCount = serverSide
+      ? itemCount
+      : (endIndex - startIndex).clamp(0, itemCount);
 
   if (visibleCount <= 0) {
     return Column(children: [Expanded(child: _tableEmptyState())]);
   }
+
+  final paginationTotalRows = serverSide ? (totalElements ?? itemCount) : itemCount;
+  final paginationTotalPages = serverSide
+      ? (totalPages ?? 1).clamp(1, 1 << 30)
+      : null;
 
   return appContainer(
     backgroundColor: ConvertixColors.surface,
@@ -158,7 +204,7 @@ Widget _tableBody({
               ? _tableScrollableBody(
                   constraints: constraints,
                   headers: headers,
-                  itemCount: itemCount,
+                  itemCount: paginationTotalRows,
                   startIndex: startIndex,
                   visibleCount: visibleCount,
                   rowBuilder: rowBuilder,
@@ -166,16 +212,18 @@ Widget _tableBody({
                   currentPage: currentPage,
                   horizontalScrollController: horizontalScrollController,
                   onPageChanged: onPageChanged,
+                  totalPagesOverride: paginationTotalPages,
                 )
               : _tableFixedBody(
                   headers: headers,
-                  itemCount: itemCount,
+                  itemCount: paginationTotalRows,
                   startIndex: startIndex,
                   visibleCount: visibleCount,
                   rowBuilder: rowBuilder,
                   rowsPerPage: rowsPerPage,
                   currentPage: currentPage,
                   onPageChanged: onPageChanged,
+                  totalPagesOverride: paginationTotalPages,
                 ),
         );
       },
@@ -192,6 +240,7 @@ Widget _tableFixedBody({
   required int rowsPerPage,
   required int currentPage,
   required ValueChanged<int> onPageChanged,
+  int? totalPagesOverride,
 }) {
   return Column(
     children: [
@@ -207,6 +256,7 @@ Widget _tableFixedBody({
         rowsPerPage: rowsPerPage,
         currentPage: currentPage,
         onPageChanged: onPageChanged,
+        totalPagesOverride: totalPagesOverride,
       ),
     ],
   );
@@ -223,6 +273,7 @@ Widget _tableScrollableBody({
   required int currentPage,
   required ScrollController horizontalScrollController,
   required ValueChanged<int> onPageChanged,
+  int? totalPagesOverride,
 }) {
   final scrollWidth = headers.length * fixedCellWidth;
   final needsHorizontalScroll = scrollWidth > constraints.maxWidth;
@@ -256,6 +307,7 @@ Widget _tableScrollableBody({
         rowsPerPage: rowsPerPage,
         currentPage: currentPage,
         onPageChanged: onPageChanged,
+        totalPagesOverride: totalPagesOverride,
       ),
     ],
   );
@@ -474,8 +526,10 @@ Widget _tablePaginationControls({
   required int rowsPerPage,
   required int currentPage,
   required ValueChanged<int> onPageChanged,
+  int? totalPagesOverride,
 }) {
-  final totalPages = (totalRows / rowsPerPage).ceil();
+  final totalPages = totalPagesOverride ??
+      (totalRows == 0 ? 1 : (totalRows / rowsPerPage).ceil());
 
   return appContainer(
     backgroundColor: ConvertixColors.background,

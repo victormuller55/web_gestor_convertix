@@ -1,3 +1,5 @@
+import 'package:web_gestor_site_covertix/function/date_format.dart';
+
 class UsuarioModel {
   int? id;
   String? nome;
@@ -62,8 +64,8 @@ class UsuarioModel {
     senha = json['senha'];
     token = json['token'];
     foto = json['foto'];
-    createdAt = _parseDate(json['created_at']);
-    updatedAt = _parseDate(json['updated_at']);
+    createdAt = parseApiDateTime(json['created_at']);
+    updatedAt = parseApiDateTime(json['updated_at']);
   }
   Map<String, dynamic> toJsonCadastroAdmin() {
     return {
@@ -90,10 +92,5 @@ class UsuarioModel {
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
-  }
-
-  static DateTime? _parseDate(dynamic value) {
-    if (value == null || value.toString().isEmpty) return null;
-    return DateTime.tryParse(value.toString());
   }
 }

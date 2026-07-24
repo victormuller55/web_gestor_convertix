@@ -1,5 +1,6 @@
 import 'package:muller_package/muller_package.dart';
 import 'package:web_gestor_site_covertix/models/assinatura_model.dart';
+import 'package:web_gestor_site_covertix/models/page_response.dart';
 
 abstract class AssinaturasState {}
 
@@ -8,8 +9,10 @@ class AssinaturasInitialState extends AssinaturasState {}
 class AssinaturasLoadingState extends AssinaturasState {}
 
 class AssinaturasSuccessState extends AssinaturasState {
-  final List<AssinaturaModel> assinaturas;
-  AssinaturasSuccessState({required this.assinaturas});
+  final PageResponse<AssinaturaModel> page;
+  AssinaturasSuccessState({required this.page});
+
+  List<AssinaturaModel> get assinaturas => page.content;
 }
 
 class AssinaturasErrorState extends AssinaturasState {

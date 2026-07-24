@@ -1,14 +1,14 @@
+import 'package:web_gestor_site_covertix/models/page_response.dart';
+
 abstract class PagamentosEvent {}
 
 class PagamentosLoadEvent extends PagamentosEvent {
-  final bool forceRefresh;
-  final String? status;
-  final String? formaPagamento;
+  final int page;
+  final int size;
 
   PagamentosLoadEvent({
-    this.forceRefresh = false,
-    this.status,
-    this.formaPagamento,
+    this.page = 0,
+    this.size = PageResponse.defaultSize,
   });
 }
 

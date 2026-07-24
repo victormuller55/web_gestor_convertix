@@ -1,11 +1,19 @@
 import 'package:image_picker/image_picker.dart';
 import 'package:web_gestor_site_covertix/models/cliente_model.dart';
+import 'package:web_gestor_site_covertix/models/page_response.dart';
 
 abstract class ClientesEvent {}
 
 class ClientesLoadEvent extends ClientesEvent {
-  final bool forceRefresh;
-  ClientesLoadEvent({this.forceRefresh = false});
+  final String? query;
+  final int page;
+  final int size;
+
+  ClientesLoadEvent({
+    this.query,
+    this.page = 0,
+    this.size = PageResponse.defaultSize,
+  });
 }
 
 class ClientesSaveEvent extends ClientesEvent {

@@ -10,6 +10,7 @@ import 'package:web_gestor_site_covertix/function/financeiro_labels.dart';
 import 'package:web_gestor_site_covertix/models/app_enums.dart';
 import 'package:web_gestor_site_covertix/models/assinatura_model.dart';
 import 'package:web_gestor_site_covertix/models/cliente_model.dart';
+import 'package:web_gestor_site_covertix/models/page_response.dart';
 import 'package:web_gestor_site_covertix/models/plano_assinatura.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/assinaturas/assinatura_cadastro.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/assinaturas/assinatura_detalhe_dialog.dart';
@@ -52,8 +53,13 @@ class _AssinaturasPageState extends State<AssinaturasPage> {
 
   final TextEditingController _buscaController = TextEditingController();
   final Debouncer _buscaDebouncer = Debouncer();
-  List<AssinaturaModel> _allAssinaturas = [];
+  List<AssinaturaModel> _pageItems = [];
   String _busca = '';
+
+  int _page = 0;
+  int _totalElements = 0;
+  int _totalPages = 0;
+  static const _size = PageResponse.defaultSize;
 
   static const _filterHeight = 48.0;
   static const _filterWidth = 200.0;
@@ -135,7 +141,7 @@ class _AssinaturasPageState extends State<AssinaturasPage> {
     _isAdminNotifier.value = isAdmin;
     if (isAdmin) {
       try {
-        final clientes = await listarClientes();
+        final clientes = await listarClientesLookup();
         if (!mounted) return;
         _clientesNotifier.value = clientes;
       } catch (_) {}
@@ -149,18 +155,33 @@ class _AssinaturasPageState extends State<AssinaturasPage> {
     });
   }
 
-  void _loadData({bool forceRefresh = false}) {
-    bloc.add(AssinaturasLoadEvent(forceRefresh: forceRefresh));
+  void _loadData({int? page}) {
+    if (page != null) _page = page;
+    bloc.add(AssinaturasLoadEvent(
+      status: _filtroStatus.value,
+      page: _page,
+      size: _size,
+    ));
   }
 
   void _reload() {
     _isReloading.value = true;
-    _loadData(forceRefresh: true);
+    _loadData(page: 0);
+  }
+
+  void _onPageChanged(int page) => _loadData(page: page);
+
+  void _onStatusChanged(String? status) {
+    _filtroStatus.value = status;
+    _loadData(page: 0);
   }
 
   void _onState(AssinaturasState state) {
     if (state is AssinaturasSuccessState) {
-      _allAssinaturas = state.assinaturas;
+      _page = state.page.page;
+      _totalElements = state.page.totalElements;
+      _totalPages = state.page.totalPages;
+      _pageItems = List.from(state.assinaturas);
       _aplicarFiltros();
       _isReloading.value = false;
     }
@@ -169,18 +190,16 @@ class _AssinaturasPageState extends State<AssinaturasPage> {
     }
     if (state is AssinaturasActionSuccessState) {
       showToastSuccess(message: state.message);
-      _loadData(forceRefresh: true);
+      _loadData();
     }
   }
 
   void _aplicarFiltros() {
-    final status = _filtroStatus.value;
     final ciclo = _filtroCiclo.value;
     final produto = _filtroProduto.value;
     final clienteId = _filtroClienteId.value;
 
-    _filtradasNotifier.value = _allAssinaturas.where((a) {
-      if (status != null && a.status != status) return false;
+    _filtradasNotifier.value = _pageItems.where((a) {
       if (clienteId != null && a.clienteId != clienteId) return false;
       if (ciclo != null && a.ciclo != ciclo) return false;
       if (produto != null) {
@@ -219,7 +238,7 @@ class _AssinaturasPageState extends State<AssinaturasPage> {
         child: AssinaturaCadastro(),
       ),
     );
-    if (criado == true) _loadData(forceRefresh: true);
+    if (criado == true) _loadData(page: 0);
   }
 
   Future<void> _abrirDetalhe(AssinaturaModel a) async {
@@ -232,7 +251,7 @@ class _AssinaturasPageState extends State<AssinaturasPage> {
         child: AssinaturaDetalheDialog(assinaturaId: a.id!),
       ),
     );
-    if (changed == true) _loadData(forceRefresh: true);
+    if (changed == true) _loadData();
   }
 
   void _onCancelar(AssinaturaModel a) {
@@ -287,7 +306,7 @@ class _AssinaturasPageState extends State<AssinaturasPage> {
   Widget _buildBody(BuildContext context, AssinaturasState state) {
     if (state is AssinaturasLoadingState) return appLoadingCovertix();
     if (state is AssinaturasErrorState) {
-      return appError(state.errorModel, function: _loadData);
+      return appError(state.errorModel, function: () => _loadData());
     }
     return Padding(
       padding: EdgeInsets.all(AppSpacing.normal),
@@ -337,8 +356,7 @@ class _AssinaturasPageState extends State<AssinaturasPage> {
                   ),
                 ],
                 onChanged: (v) {
-                  _filtroStatus.value = v;
-                  _aplicarFiltros();
+                  _onStatusChanged(v);
                 },
               ),
             ),
@@ -455,7 +473,7 @@ class _AssinaturasPageState extends State<AssinaturasPage> {
   Widget _table(List<AssinaturaModel> assinaturas) {
     return AppTable(
       expand: false,
-      rowsPerPage: 20,
+      rowsPerPage: _size,
       headers: [
         cellHeaderAction(),
         cellHeader('Cliente', _clienteFlex),
@@ -469,6 +487,10 @@ class _AssinaturasPageState extends State<AssinaturasPage> {
       ],
       itemCount: assinaturas.length,
       rowBuilder: (index) => _row(assinaturas[index]),
+      page: _page,
+      totalElements: _totalElements,
+      totalPages: _totalPages <= 0 ? 1 : _totalPages,
+      onPageChanged: _onPageChanged,
     );
   }
 

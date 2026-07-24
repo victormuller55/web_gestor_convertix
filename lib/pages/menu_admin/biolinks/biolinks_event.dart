@@ -1,11 +1,17 @@
 import 'package:image_picker/image_picker.dart';
 import 'package:web_gestor_site_covertix/models/biolink_model.dart';
+import 'package:web_gestor_site_covertix/models/page_response.dart';
 
 abstract class BiolinksEvent {}
 
 class BiolinksLoadEvent extends BiolinksEvent {
-  final bool forceRefresh;
-  BiolinksLoadEvent({this.forceRefresh = false});
+  final int page;
+  final int size;
+
+  BiolinksLoadEvent({
+    this.page = 0,
+    this.size = PageResponse.defaultSize,
+  });
 }
 
 class BiolinksSaveEvent extends BiolinksEvent {

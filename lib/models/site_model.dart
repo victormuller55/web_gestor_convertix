@@ -1,3 +1,4 @@
+import 'package:web_gestor_site_covertix/function/date_format.dart';
 import 'package:web_gestor_site_covertix/models/app_enums.dart';
 import 'package:web_gestor_site_covertix/models/site_dominio_model.dart';
 
@@ -60,8 +61,8 @@ class SiteModel {
     dominioInfo = info is Map<String, dynamic>
         ? SiteDominioModel.fromMap(info)
         : null;
-    createdAt = _parseDateTime(json['created_at']);
-    updatedAt = _parseDateTime(json['updated_at']);
+    createdAt = parseApiDateTime(json['created_at']);
+    updatedAt = parseApiDateTime(json['updated_at']);
   }
 
   Map<String, dynamic> toJsonCadastro() {
@@ -87,11 +88,6 @@ class SiteModel {
   static String? _nullableString(String? value) {
     if (value == null || value.trim().isEmpty) return null;
     return value.trim();
-  }
-
-  static DateTime? _parseDateTime(dynamic value) {
-    if (value == null || value.toString().isEmpty) return null;
-    return DateTime.tryParse(value.toString());
   }
 
   static String labelTipo(String? tipo) {

@@ -5,22 +5,31 @@ import 'package:web_gestor_site_covertix/core/cache/cache_keys.dart';
 import 'package:web_gestor_site_covertix/core/cache/page_data_cache.dart';
 import 'package:web_gestor_site_covertix/function/http_helper.dart';
 import 'package:web_gestor_site_covertix/models/cliente_model.dart';
+import 'package:web_gestor_site_covertix/models/page_response.dart';
 import 'package:web_gestor_site_covertix/services/cliente_service.dart';
 
-Future<List<ClienteModel>> listarClientes({bool forceRefresh = false}) async {
-  if (!forceRefresh) {
-    final cached = await PageDataCache.getJsonList(CacheKeys.clientes);
-    if (cached != null) {
-      return cached.map(ClienteModel.fromMap).toList();
-    }
-  }
-  final response = await getClientes();
-  final list = jsonDecode(response.body) as List;
-  final maps = list
-      .map((item) => Map<String, dynamic>.from(item as Map))
-      .toList();
-  await PageDataCache.setJsonList(CacheKeys.clientes, maps);
-  return maps.map(ClienteModel.fromMap).toList();
+Future<PageResponse<ClienteModel>> listarClientes({
+  String? query,
+  int page = 0,
+  int size = PageResponse.defaultSize,
+}) async {
+  final response = await getClientes(query: query, page: page, size: size);
+  return PageResponse.fromMap(
+    Map<String, dynamic>.from(jsonDecode(response.body) as Map),
+    ClienteModel.fromMap,
+  );
+}
+
+/// Carrega até [PageResponse.maxSize] itens (dropdowns / lookups).
+Future<List<ClienteModel>> listarClientesLookup({
+  String? query,
+}) async {
+  final page = await listarClientes(
+    query: query,
+    page: 0,
+    size: PageResponse.maxSize,
+  );
+  return page.content;
 }
 
 Future<ClienteModel> criarCliente(ClienteModel cliente, {XFile? foto}) async {

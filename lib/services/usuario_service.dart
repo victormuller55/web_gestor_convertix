@@ -6,10 +6,18 @@ Future<AppResponse> getUsuarios({
   int? id,
   String? query,
   bool? ativo,
+  int page = 0,
+  int size = 30,
 }) async {
   return getHTTP(
     endpoint: AppEndpoints.endpointUsuarios,
-    parameters: _queryParams(id: id, query: query, ativo: ativo),
+    parameters: _queryParams(
+      id: id,
+      query: query,
+      ativo: ativo,
+      page: page,
+      size: size,
+    ),
     headers: await getAuthHeaders(),
   );
 }
@@ -39,10 +47,19 @@ Future<AppResponse> deleteUsuario(int id) async {
   );
 }
 
-Map<String, String>? _queryParams({int? id, String? query, bool? ativo}) {
-  final params = <String, String>{};
+Map<String, String> _queryParams({
+  int? id,
+  String? query,
+  bool? ativo,
+  int page = 0,
+  int size = 30,
+}) {
+  final params = <String, String>{
+    'page': page.toString(),
+    'size': size.toString(),
+  };
   if (id != null) params['id'] = id.toString();
   if (query != null && query.isNotEmpty) params['query'] = query;
   if (ativo != null) params['ativo'] = ativo.toString();
-  return params.isEmpty ? null : params;
+  return params;
 }

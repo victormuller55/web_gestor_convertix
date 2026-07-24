@@ -8,6 +8,7 @@ import 'package:web_gestor_site_covertix/app_config/const/covertix_colors.dart';
 import 'package:web_gestor_site_covertix/function/app_toast.dart';
 import 'package:web_gestor_site_covertix/function/debounce.dart';
 import 'package:web_gestor_site_covertix/models/biolink_model.dart';
+import 'package:web_gestor_site_covertix/models/page_response.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/biolinks/biolinks_bloc.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/biolinks/biolinks_cadastro.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/biolinks/biolinks_event.dart';
@@ -34,11 +35,17 @@ class _BioLinksPageState extends State<BioLinksPage> {
   final BiolinksBloc bloc = BiolinksBloc();
 
   late AppFormField _formSearch;
-  late List<BioLinkModel> _allBioLinks;
+  late List<BioLinkModel> _pageItems;
   late ValueNotifier<List<BioLinkModel>> _biolinksNotifier;
   final ValueNotifier<bool> _isAdminNotifier = ValueNotifier(false);
   final ValueNotifier<bool> _isReloading = ValueNotifier(false);
   final Debouncer _buscaDebouncer = Debouncer();
+
+  int _page = 0;
+  int _totalElements = 0;
+  int _totalPages = 0;
+  String _buscaLocal = '';
+  static const _size = PageResponse.defaultSize;
 
   String get _titulo => widget.tituloPagina ?? 'BioLinks';
 
@@ -51,7 +58,7 @@ class _BioLinksPageState extends State<BioLinksPage> {
   @override
   void initState() {
     super.initState();
-    _allBioLinks = [];
+    _pageItems = [];
     _biolinksNotifier = ValueNotifier<List<BioLinkModel>>([]);
     _initFormSearch();
     _carregarUsuario();
@@ -98,36 +105,53 @@ class _BioLinksPageState extends State<BioLinksPage> {
     );
   }
 
-  void _loadData({bool forceRefresh = false}) {
-    bloc.add(BiolinksLoadEvent(forceRefresh: forceRefresh));
+  void _loadData({int? page}) {
+    if (page != null) _page = page;
+    bloc.add(BiolinksLoadEvent(
+      page: _page,
+      size: _size,
+    ));
   }
 
   void _reload() {
     _isReloading.value = true;
-    _loadData(forceRefresh: true);
+    _loadData(page: 0);
   }
 
   void _search(String termo) {
     _buscaDebouncer.run(() {
-      final q = termo.toLowerCase();
-      final filtrados = _allBioLinks.where((b) {
-        final id = b.id?.toString() ?? '';
-        final site = b.siteNome?.toLowerCase() ?? '';
-        final usuario = b.nomeUsuario?.toLowerCase() ?? '';
-        final descricao = b.descricao?.toLowerCase() ?? '';
-        return id.contains(q) ||
-            site.contains(q) ||
-            usuario.contains(q) ||
-            descricao.contains(q);
-      }).toList();
-      _biolinksNotifier.value = filtrados;
+      _buscaLocal = termo.trim().toLowerCase();
+      _aplicarFiltroLocal();
     });
   }
 
+  void _aplicarFiltroLocal() {
+    final q = _buscaLocal;
+    if (q.isEmpty) {
+      _biolinksNotifier.value = List.from(_pageItems);
+      return;
+    }
+    _biolinksNotifier.value = _pageItems.where((b) {
+      final id = b.id?.toString() ?? '';
+      final site = b.siteNome?.toLowerCase() ?? '';
+      final usuario = b.nomeUsuario?.toLowerCase() ?? '';
+      final descricao = b.descricao?.toLowerCase() ?? '';
+      return id.contains(q) ||
+          site.contains(q) ||
+          usuario.contains(q) ||
+          descricao.contains(q);
+    }).toList();
+  }
+
+  void _onPageChanged(int page) => _loadData(page: page);
+
   void _onChangeState(BiolinksState state) {
     if (state is BiolinksSuccessState) {
-      _allBioLinks = state.biolinks;
-      _biolinksNotifier.value = List.from(_allBioLinks);
+      _page = state.page.page;
+      _totalElements = state.page.totalElements;
+      _totalPages = state.page.totalPages;
+      _pageItems = List.from(state.biolinks);
+      _aplicarFiltroLocal();
       if (_isReloading.value) _isReloading.value = false;
     }
     if (state is BiolinksErrorState && _isReloading.value) {
@@ -135,7 +159,7 @@ class _BioLinksPageState extends State<BioLinksPage> {
     }
     if (state is BiolinksDeleteSuccessState) {
       showToastSuccess(message: 'BioLink excluído com sucesso');
-      _loadData(forceRefresh: true);
+      _loadData();
     }
   }
 
@@ -157,7 +181,7 @@ class _BioLinksPageState extends State<BioLinksPage> {
       barrierDismissible: false,
       builder: (_) => _cadastroDialog(biolink),
     );
-    if (salvo == true) _loadData(forceRefresh: true);
+    if (salvo == true) _loadData(page: 0);
   }
 
   Future<void> _abrirItens(BioLinkModel biolink) async {
@@ -248,7 +272,7 @@ class _BioLinksPageState extends State<BioLinksPage> {
   Widget _buildBlocBody(BuildContext context, BiolinksState state) {
     if (state is BiolinksLoadingState) return appLoadingCovertix();
     if (state is BiolinksErrorState) {
-      return appError(state.errorModel, function: _loadData);
+      return appError(state.errorModel, function: () => _loadData());
     }
     return _biolinksListBody();
   }
@@ -395,10 +419,14 @@ class _BioLinksPageState extends State<BioLinksPage> {
 
   Widget _table(List<BioLinkModel> biolinks, bool isAdmin) {
     return AppTable(
-      rowsPerPage: 30,
+      rowsPerPage: _size,
       headers: _tableHeaders(),
       itemCount: biolinks.length,
       rowBuilder: (index) => _tableRow(biolinks[index], isAdmin),
+      page: _page,
+      totalElements: _totalElements,
+      totalPages: _totalPages <= 0 ? 1 : _totalPages,
+      onPageChanged: _onPageChanged,
     );
   }
 

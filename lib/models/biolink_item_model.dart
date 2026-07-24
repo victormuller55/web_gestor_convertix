@@ -1,3 +1,4 @@
+import 'package:web_gestor_site_covertix/function/date_format.dart';
 import 'package:web_gestor_site_covertix/models/biolink_item_icone.dart';
 
 class BioLinkItemModel {
@@ -42,8 +43,8 @@ class BioLinkItemModel {
     icone = BioLinkItemIcone.fromJson(json['icone']);
     ordem = json['ordem'];
     ativo = json['ativo'];
-    createdAt = _parseDateTime(json['created_at']);
-    updatedAt = _parseDateTime(json['updated_at']);
+    createdAt = parseApiDateTime(json['created_at']);
+    updatedAt = parseApiDateTime(json['updated_at']);
   }
 
   Map<String, dynamic> toJsonCadastro({bool includeBiolinkId = true}) {
@@ -60,10 +61,5 @@ class BioLinkItemModel {
   static String? _nullableString(String? value) {
     if (value == null || value.trim().isEmpty) return null;
     return value.trim();
-  }
-
-  static DateTime? _parseDateTime(dynamic value) {
-    if (value == null || value.toString().isEmpty) return null;
-    return DateTime.tryParse(value.toString());
   }
 }

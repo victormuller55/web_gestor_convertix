@@ -84,7 +84,7 @@ class AssinaturaModel {
       'ciclo': ciclo,
       'forma_pagamento': formaPagamento,
       if (proximaCobranca != null)
-        'proxima_cobranca': _formatApiDate(proximaCobranca!),
+        'proxima_cobranca': formatApiDate(proximaCobranca!),
       if (externalReference != null && externalReference!.isNotEmpty)
         'external_reference': externalReference,
     };
@@ -105,11 +105,4 @@ double? _parseDouble(dynamic value) {
   if (value == null) return null;
   if (value is num) return value.toDouble();
   return double.tryParse(value.toString());
-}
-
-String _formatApiDate(DateTime date) {
-  final y = date.year;
-  final m = date.month.toString().padLeft(2, '0');
-  final d = date.day.toString().padLeft(2, '0');
-  return '$y-$m-$d';
 }

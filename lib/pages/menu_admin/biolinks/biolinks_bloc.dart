@@ -9,8 +9,8 @@ class BiolinksBloc extends Bloc<BiolinksEvent, BiolinksState> {
     on<BiolinksLoadEvent>((event, emit) async {
       emit(BiolinksLoadingState());
       try {
-        final biolinks = await listarBioLinks(forceRefresh: event.forceRefresh);
-        emit(BiolinksSuccessState(biolinks: biolinks));
+        final page = await listarBioLinks(page: event.page, size: event.size);
+        emit(BiolinksSuccessState(page: page));
       } catch (e) {
         emit(BiolinksErrorState(errorModel: parseApiError(e)));
       }

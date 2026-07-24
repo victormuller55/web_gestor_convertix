@@ -11,10 +11,19 @@ class PagamentosBloc extends Bloc<PagamentosEvent, PagamentosState> {
     on<PagamentosLoadEvent>((event, emit) async {
       emit(PagamentosLoadingState());
       try {
-        final pagamentos = await listarHistoricoPagamentos(
-          forceRefresh: event.forceRefresh,
+        final page = await listarHistoricoPagamentos(
+          page: event.page,
+          size: event.size,
         );
-        emit(PagamentosSuccessState(pagamentos: _ordenarPagamentos(pagamentos)));
+        emit(PagamentosSuccessState(
+          page: PagamentoPageModel(
+            content: _ordenarPagamentos(page.content),
+            page: page.page,
+            size: page.size,
+            totalElements: page.totalElements,
+            totalPages: page.totalPages,
+          ),
+        ));
       } catch (e) {
         emit(PagamentosErrorState(errorModel: parseApiError(e)));
       }

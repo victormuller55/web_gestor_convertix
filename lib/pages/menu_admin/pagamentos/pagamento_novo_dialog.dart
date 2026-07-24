@@ -54,7 +54,7 @@ class _PagamentoNovoDialogState extends State<PagamentoNovoDialog> {
     if (admin) {
       setState(() => _loadingClientes = true);
       try {
-        final clientes = await listarClientes();
+        final clientes = await listarClientesLookup();
         if (!mounted) return;
         setState(() {
           _clientes = clientes;

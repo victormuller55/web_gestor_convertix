@@ -8,8 +8,10 @@ class PagamentosInitialState extends PagamentosState {}
 class PagamentosLoadingState extends PagamentosState {}
 
 class PagamentosSuccessState extends PagamentosState {
-  final List<PagamentoModel> pagamentos;
-  PagamentosSuccessState({required this.pagamentos});
+  final PagamentoPageModel page;
+  PagamentosSuccessState({required this.page});
+
+  List<PagamentoModel> get pagamentos => page.content;
 }
 
 class PagamentosErrorState extends PagamentosState {

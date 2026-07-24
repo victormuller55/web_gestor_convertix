@@ -88,16 +88,17 @@ class _AssinaturaCadastroState extends State<AssinaturaCadastro> {
     if (!admin) return;
 
     try {
-      final results = await Future.wait([
-        listarClientes(),
-        listarSites(),
-        listarAssinaturas(),
-      ]);
+      final clientesFuture = listarClientesLookup();
+      final sitesFuture = listarSitesLookup();
+      final assinaturasFuture = listarAssinaturasLookup();
+      final clientes = await clientesFuture;
+      final sites = await sitesFuture;
+      final assinaturas = await assinaturasFuture;
       if (!mounted) return;
       setState(() {
-        _clientes = results[0] as List<ClienteModel>;
-        _todosSites = results[1] as List<SiteModel>;
-        _assinaturas = results[2] as List<AssinaturaModel>;
+        _clientes = clientes;
+        _todosSites = sites;
+        _assinaturas = assinaturas;
       });
     } catch (_) {
       if (!mounted) return;
@@ -139,8 +140,7 @@ class _AssinaturaCadastroState extends State<AssinaturaCadastro> {
 
     try {
       // Garante dados frescos de assinaturas ao trocar cliente.
-      final assinaturas = await listarAssinaturas(
-        forceRefresh: true,
+      final assinaturas = await listarAssinaturasLookup(
         status: StatusAssinatura.active,
       );
       if (!mounted) return;

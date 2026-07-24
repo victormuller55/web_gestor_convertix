@@ -1,4 +1,4 @@
-const String server = 'https://api.convertix.net.br';
+const String server = 'http://localhost:5000';
 const String api = '$server/api/v1';
 
 String fotoUrl(String? path) {

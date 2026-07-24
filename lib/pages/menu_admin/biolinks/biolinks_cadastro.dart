@@ -80,8 +80,8 @@ class _BiolinksCadastroState extends State<BiolinksCadastro> {
   Future<void> _carregarSites() async {
     _carregandoSitesNotifier.value = true;
     try {
-      final sites = await listarSites();
-      final biolinks = await listarBioLinks();
+      final sites = await listarSitesLookup();
+      final biolinks = await listarBioLinksLookup();
       final sitesComBioLink = biolinks
           .where((b) => b.id != widget.biolink.id)
           .map((b) => b.siteId)

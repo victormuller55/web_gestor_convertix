@@ -34,31 +34,23 @@ String formatApiDate(DateTime date) {
   return '$y-$m-$d';
 }
 
-/// Aceita ISO string ou array Jackson (`[2026, 8, 21]` / `[2026, 8, 21, 19, 30, 0, 0]`).
+/// Converte string ISO-8601 da API em [DateTime] local.
+///
+/// Exemplos:
+/// - `"2026-07-01T19:29:25.539960"` → data/hora local (sem inventar offset)
+/// - `"2026-07-01"` → meia-noite local (evita UTC que o [DateTime.tryParse] aplica em date-only)
 DateTime? parseApiDateTime(dynamic value) {
   if (value == null) return null;
 
-  if (value is List) {
-    if (value.isEmpty) return null;
-    final y = _asInt(value[0]);
-    final m = value.length > 1 ? _asInt(value[1]) : 1;
-    final d = value.length > 2 ? _asInt(value[2]) : 1;
-    if (y == null || m == null || d == null) return null;
-    final h = value.length > 3 ? (_asInt(value[3]) ?? 0) : 0;
-    final min = value.length > 4 ? (_asInt(value[4]) ?? 0) : 0;
-    final s = value.length > 5 ? (_asInt(value[5]) ?? 0) : 0;
-    return DateTime(y, m, d, h, min, s);
-  }
-
   final text = value.toString().trim();
   if (text.isEmpty || text == 'null') return null;
-  return DateTime.tryParse(text);
-}
 
-int? _asInt(dynamic value) {
-  if (value is int) return value;
-  if (value is num) return value.toInt();
-  return int.tryParse(value.toString());
+  // LocalDate da API: "YYYY-MM-DD" — força horário local.
+  if (text.length == 10 && RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(text)) {
+    return DateTime.tryParse('${text}T00:00:00');
+  }
+
+  return DateTime.tryParse(text);
 }
 
 /// Converte texto de valor no formato brasileiro (`1.234,56` ou `1234,56`) em double.

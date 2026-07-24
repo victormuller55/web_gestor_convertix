@@ -9,7 +9,10 @@ import 'package:web_gestor_site_covertix/function/app_toast.dart';
 import 'package:web_gestor_site_covertix/function/financeiro_labels.dart';
 import 'package:web_gestor_site_covertix/function/link_helper.dart';
 import 'package:web_gestor_site_covertix/models/app_enums.dart';
+import 'package:web_gestor_site_covertix/models/cliente_model.dart';
+import 'package:web_gestor_site_covertix/models/page_response.dart';
 import 'package:web_gestor_site_covertix/models/pagamento_model.dart';
+import 'package:web_gestor_site_covertix/pages/menu_admin/clientes/clientes_service.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/pagamentos/pagamento_detalhe_dialog.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/pagamentos/pagamento_novo_dialog.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/pagamentos/pagamentos_bloc.dart';
@@ -40,16 +43,25 @@ class _PagamentosPageState extends State<PagamentosPage> {
   final ValueNotifier<bool> _isAdminNotifier = ValueNotifier(false);
   final ValueNotifier<List<PagamentoModel>> _pagamentosNotifier =
       ValueNotifier([]);
+  final ValueNotifier<List<ClienteModel>> _clientesNotifier =
+      ValueNotifier(const []);
   final ValueNotifier<String?> _filtroStatus = ValueNotifier(null);
   final ValueNotifier<String?> _filtroForma = ValueNotifier(null);
+  final ValueNotifier<int?> _filtroClienteId = ValueNotifier(null);
 
-  List<PagamentoModel> _allPagamentos = [];
+  List<PagamentoModel> _pageItems = [];
 
+  int _page = 0;
+  int _totalElements = 0;
+  int _totalPages = 0;
+  static const _size = PageResponse.defaultSize;
+
+  static const _clienteFlex = 0.7;
   static const _descFlex = 0.9;
   static const _valorFlex = 0.35;
   static const _statusFlex = 0.4;
   static const _vencimentoFlex = 0.45;
-  static const _mensagemFlex = 0.9;
+  static const _pagamentoFlex = 0.55;
 
   @override
   void initState() {
@@ -63,8 +75,10 @@ class _PagamentosPageState extends State<PagamentosPage> {
     _isReloading.dispose();
     _isAdminNotifier.dispose();
     _pagamentosNotifier.dispose();
+    _clientesNotifier.dispose();
     _filtroStatus.dispose();
     _filtroForma.dispose();
+    _filtroClienteId.dispose();
     bloc.close();
     super.dispose();
   }
@@ -73,20 +87,36 @@ class _PagamentosPageState extends State<PagamentosPage> {
     final isAdmin = await isAdminLogado();
     if (!mounted) return;
     _isAdminNotifier.value = isAdmin;
+    if (isAdmin) {
+      try {
+        final clientes = await listarClientesLookup();
+        if (!mounted) return;
+        _clientesNotifier.value = clientes;
+      } catch (_) {}
+    }
   }
 
-  void _loadData({bool forceRefresh = false}) {
-    bloc.add(PagamentosLoadEvent(forceRefresh: forceRefresh));
+  void _loadData({int? page}) {
+    if (page != null) _page = page;
+    bloc.add(PagamentosLoadEvent(
+      page: _page,
+      size: _size,
+    ));
   }
 
   void _reload() {
     _isReloading.value = true;
-    _loadData(forceRefresh: true);
+    _loadData(page: 0);
   }
+
+  void _onPageChanged(int page) => _loadData(page: page);
 
   void _onState(PagamentosState state) {
     if (state is PagamentosSuccessState) {
-      _allPagamentos = state.pagamentos;
+      _page = state.page.page;
+      _totalElements = state.page.totalElements;
+      _totalPages = state.page.totalPages;
+      _pageItems = List.from(state.pagamentos);
       _aplicarFiltros();
       _isReloading.value = false;
     }
@@ -95,14 +125,18 @@ class _PagamentosPageState extends State<PagamentosPage> {
     }
     if (state is PagamentosActionSuccessState) {
       showToastSuccess(message: state.message);
-      _loadData(forceRefresh: true);
+      _loadData();
     }
   }
 
   void _aplicarFiltros() {
     final status = _filtroStatus.value;
     final forma = _filtroForma.value;
-    var filtrados = _allPagamentos;
+    final clienteId = _filtroClienteId.value;
+    var filtrados = _pageItems;
+    if (clienteId != null) {
+      filtrados = filtrados.where((p) => p.clienteId == clienteId).toList();
+    }
     if (status != null && status.isNotEmpty) {
       filtrados = filtrados.where((p) => p.status == status).toList();
     }
@@ -123,7 +157,7 @@ class _PagamentosPageState extends State<PagamentosPage> {
         child: PagamentoNovoDialog(),
       ),
     );
-    if (criado == true) _loadData(forceRefresh: true);
+    if (criado == true) _loadData(page: 0);
   }
 
   Future<void> _abrirDetalhe(PagamentoModel pagamento) async {
@@ -136,7 +170,7 @@ class _PagamentosPageState extends State<PagamentosPage> {
         child: PagamentoDetalheDialog(pagamentoId: pagamento.id!),
       ),
     );
-    if (alterado == true) _loadData(forceRefresh: true);
+    if (alterado == true) _loadData();
   }
 
   void _onCancelar(PagamentoModel pagamento) {
@@ -225,7 +259,7 @@ class _PagamentosPageState extends State<PagamentosPage> {
   Widget _buildBody(BuildContext context, PagamentosState state) {
     if (state is PagamentosLoadingState) return appLoadingCovertix();
     if (state is PagamentosErrorState) {
-      return appError(state.errorModel, function: _loadData);
+      return appError(state.errorModel, function: () => _loadData());
     }
     return Padding(
       padding: EdgeInsets.all(AppSpacing.normal),
@@ -304,6 +338,46 @@ class _PagamentosPageState extends State<PagamentosPage> {
             valueListenable: _isAdminNotifier,
             builder: (_, isAdmin, __) {
               if (!isAdmin) return const SizedBox.shrink();
+              return SizedBox(
+                width: 220,
+                child: ValueListenableBuilder<List<ClienteModel>>(
+                  valueListenable: _clientesNotifier,
+                  builder: (_, clientes, __) {
+                    return ValueListenableBuilder<int?>(
+                      valueListenable: _filtroClienteId,
+                      builder: (_, value, __) => covertixDropdownFormField<int?>(
+                        value: value,
+                        hint: 'Cliente',
+                        withTopInset: true,
+                        items: [
+                          const DropdownMenuItem(
+                            value: null,
+                            child: Text('Todos clientes'),
+                          ),
+                          ...clientes.where((c) => c.id != null).map(
+                                (c) => DropdownMenuItem(
+                                  value: c.id,
+                                  child: Text(
+                                    c.nomeEmpresa ?? 'Cliente ${c.id}',
+                                  ),
+                                ),
+                              ),
+                        ],
+                        onChanged: (v) {
+                          _filtroClienteId.value = v;
+                          _aplicarFiltros();
+                        },
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+          ValueListenableBuilder<bool>(
+            valueListenable: _isAdminNotifier,
+            builder: (_, isAdmin, __) {
+              if (!isAdmin) return const SizedBox.shrink();
               return Padding(
                 padding: const EdgeInsets.only(top: 10),
                 child: appElevatedButtonCovertix(
@@ -324,17 +398,22 @@ class _PagamentosPageState extends State<PagamentosPage> {
   Widget _table(List<PagamentoModel> pagamentos) {
     return AppTable(
       expand: false,
-      rowsPerPage: 20,
+      rowsPerPage: _size,
       headers: [
         cellHeaderAction(),
+        cellHeader('Cliente', _clienteFlex),
         cellHeader('Descrição', _descFlex),
         cellHeader('Valor', _valorFlex),
         cellHeader('Status', _statusFlex),
         cellHeader('Data de vencimento', _vencimentoFlex),
-        cellHeader('Mensagem', _mensagemFlex),
+        cellHeader('Data do pagamento', _pagamentoFlex),
       ],
       itemCount: pagamentos.length,
       rowBuilder: (index) => _row(pagamentos[index]),
+      page: _page,
+      totalElements: _totalElements,
+      totalPages: _totalPages <= 0 ? 1 : _totalPages,
+      onPageChanged: _onPageChanged,
     );
   }
 
@@ -343,18 +422,15 @@ class _PagamentosPageState extends State<PagamentosPage> {
       key: ValueKey(p.id),
       columns: [
         cellAction(_popup(p)),
-        cellName(p.descricao ?? '', flex: _descFlex),
+        cellName(p.clienteNomeEmpresa ?? '—', flex: _clienteFlex),
+        cellText(p.descricao ?? '—', _descFlex),
         cellMoney(p.valor, _valorFlex),
         cell(
           flex: _statusFlex,
           child: financeiroStatusChip(p.status),
         ),
         cellDate(p.dataVencimento, _vencimentoFlex),
-        cellText(
-          labelMensagemPagamento(p.mensagemAsaas, status: p.status),
-          _mensagemFlex,
-          showDivider: false,
-        ),
+        cellDateTime(p.dataConfirmacao, _pagamentoFlex, showDivider: false),
       ],
     );
   }

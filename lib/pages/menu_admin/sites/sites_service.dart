@@ -4,22 +4,29 @@ import 'package:web_gestor_site_covertix/app_config/const/app_endpoints.dart';
 import 'package:web_gestor_site_covertix/core/cache/cache_keys.dart';
 import 'package:web_gestor_site_covertix/core/cache/page_data_cache.dart';
 import 'package:web_gestor_site_covertix/function/http_helper.dart';
+import 'package:web_gestor_site_covertix/models/page_response.dart';
 import 'package:web_gestor_site_covertix/models/site_model.dart';
 import 'package:web_gestor_site_covertix/services/site_service.dart';
 
-Future<List<SiteModel>> listarSites({bool forceRefresh = false}) async {
-  if (!forceRefresh) {
-    final cached = await PageDataCache.getJsonList(CacheKeys.sites);
-    if (cached != null) {
-      return cached.map(SiteModel.fromMap).toList();
-    }
-  }
+Future<PageResponse<SiteModel>> listarSites({
+  String? query,
+  int page = 0,
+  int size = PageResponse.defaultSize,
+}) async {
+  final response = await getSites(query: query, page: page, size: size);
+  return PageResponse.fromMap(
+    Map<String, dynamic>.from(jsonDecode(response.body) as Map),
+    SiteModel.fromMap,
+  );
+}
 
-  final response = await getSites();
-  final list = jsonDecode(response.body) as List;
-  final maps = list.map((item) => Map<String, dynamic>.from(item as Map)).toList();
-  await PageDataCache.setJsonList(CacheKeys.sites, maps);
-  return maps.map(SiteModel.fromMap).toList();
+Future<List<SiteModel>> listarSitesLookup({String? query}) async {
+  final page = await listarSites(
+    query: query,
+    page: 0,
+    size: PageResponse.maxSize,
+  );
+  return page.content;
 }
 
 Future<SiteModel> criarSite(SiteModel site) async {

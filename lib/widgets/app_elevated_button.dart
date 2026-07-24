@@ -40,6 +40,7 @@ Widget appElevatedButtonCovertix({
             buttonWidth: buttonWidth,
             borderRadius: borderRadius,
             textSize: textSize,
+            color: color,
           ),
         ),
       );
@@ -76,9 +77,14 @@ Widget _animatedElevatedButton({
   required double buttonWidth,
   required double borderRadius,
   required double textSize,
+  Color? color,
 }) {
   final isOutline = invertedStyle ? hover : !hover;
-  final colors = _resolveElevatedButtonColors(primary: primary, isOutline: isOutline);
+  final colors = _resolveElevatedButtonColors(
+    primary: primary,
+    isOutline: isOutline,
+    color: color,
+  );
 
   return AnimatedContainer(
     duration: AppTheme.buttonHoverDuration,
@@ -121,21 +127,24 @@ Widget _animatedElevatedButton({
     _resolveElevatedButtonColors({
   required bool primary,
   required bool isOutline,
+  Color? color,
 }) {
+  final accent = color ?? local.ConvertixColors.buttonPrimary;
+
   if (primary) {
     if (isOutline) {
       return (
         backgroundColor: local.ConvertixColors.surface,
-        textColor: local.ConvertixColors.buttonPrimary,
-        borderColor: local.ConvertixColors.buttonPrimary,
+        textColor: accent,
+        borderColor: accent,
         borderWidth: AppTheme.buttonBorderWidthHover,
       );
     }
 
     return (
-      backgroundColor: local.ConvertixColors.buttonPrimary,
+      backgroundColor: accent,
       textColor: local.ConvertixColors.white,
-      borderColor: local.ConvertixColors.buttonPrimary,
+      borderColor: accent,
       borderWidth: 0,
     );
   }
@@ -143,8 +152,8 @@ Widget _animatedElevatedButton({
   if (isOutline) {
     return (
       backgroundColor: local.ConvertixColors.surface,
-      textColor: local.ConvertixColors.buttonPrimary,
-      borderColor: local.ConvertixColors.buttonPrimary,
+      textColor: accent,
+      borderColor: accent,
       borderWidth: AppTheme.buttonBorderWidthHover,
     );
   }

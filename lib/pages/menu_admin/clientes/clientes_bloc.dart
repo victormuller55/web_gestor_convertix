@@ -9,8 +9,12 @@ class ClientesBloc extends Bloc<ClientesEvent, ClientesState> {
     on<ClientesLoadEvent>((event, emit) async {
       emit(ClientesLoadingState());
       try {
-        final clientes = await listarClientes(forceRefresh: event.forceRefresh);
-        emit(ClientesSuccessState(clientes: clientes));
+        final page = await listarClientes(
+          query: event.query,
+          page: event.page,
+          size: event.size,
+        );
+        emit(ClientesSuccessState(page: page));
       } catch (e) {
         emit(ClientesErrorState(errorModel: parseApiError(e)));
       }

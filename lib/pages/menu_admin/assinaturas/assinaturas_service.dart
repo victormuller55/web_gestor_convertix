@@ -3,29 +3,33 @@ import 'dart:convert';
 import 'package:web_gestor_site_covertix/core/cache/cache_keys.dart';
 import 'package:web_gestor_site_covertix/core/cache/page_data_cache.dart';
 import 'package:web_gestor_site_covertix/models/assinatura_model.dart';
+import 'package:web_gestor_site_covertix/models/page_response.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/financeiro/financeiro_service.dart';
 import 'package:web_gestor_site_covertix/services/assinatura_service.dart';
 
-Future<List<AssinaturaModel>> listarAssinaturas({
-  bool forceRefresh = false,
+Future<PageResponse<AssinaturaModel>> listarAssinaturas({
   String? status,
+  int page = 0,
+  int size = PageResponse.defaultSize,
 }) async {
-  if (!forceRefresh && (status == null || status.isEmpty)) {
-    final cached = await PageDataCache.getJsonList(CacheKeys.assinaturas);
-    if (cached != null) {
-      return cached.map(AssinaturaModel.fromMap).toList();
-    }
-  }
+  final response = await getAssinaturas(
+    status: status,
+    page: page,
+    size: size,
+  );
+  return PageResponse.fromMap(
+    Map<String, dynamic>.from(jsonDecode(response.body) as Map),
+    AssinaturaModel.fromMap,
+  );
+}
 
-  final response = await getAssinaturas(status: status);
-  final list = jsonDecode(response.body) as List;
-  final maps = list
-      .map((item) => Map<String, dynamic>.from(item as Map))
-      .toList();
-  if (status == null || status.isEmpty) {
-    await PageDataCache.setJsonList(CacheKeys.assinaturas, maps);
-  }
-  return maps.map(AssinaturaModel.fromMap).toList();
+Future<List<AssinaturaModel>> listarAssinaturasLookup({String? status}) async {
+  final page = await listarAssinaturas(
+    status: status,
+    page: 0,
+    size: PageResponse.maxSize,
+  );
+  return page.content;
 }
 
 Future<AssinaturaModel> obterAssinatura(int id) async {

@@ -7,6 +7,7 @@ import 'package:web_gestor_site_covertix/app_config/const/covertix_colors.dart';
 import 'package:web_gestor_site_covertix/function/app_toast.dart';
 import 'package:web_gestor_site_covertix/function/debounce.dart';
 import 'package:web_gestor_site_covertix/models/cliente_model.dart';
+import 'package:web_gestor_site_covertix/models/page_response.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/clientes/clientes_bloc.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/clientes/clientes_cadastro.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/clientes/clientes_event.dart';
@@ -30,10 +31,15 @@ class _ClientesPageState extends State<ClientesPage> {
   final ClientesBloc bloc = ClientesBloc();
 
   late AppFormField _formSearch;
-  late List<ClienteModel> _allClientes;
   late ValueNotifier<List<ClienteModel>> _clientesNotifier;
   final ValueNotifier<bool> _isReloading = ValueNotifier(false);
   final Debouncer _buscaDebouncer = Debouncer();
+
+  int _page = 0;
+  int _totalElements = 0;
+  int _totalPages = 0;
+  String _query = '';
+  static const _size = PageResponse.defaultSize;
 
   static const _fotoFlex = 0.25;
   static const _empresaFlex = 0.7;
@@ -45,7 +51,6 @@ class _ClientesPageState extends State<ClientesPage> {
   @override
   void initState() {
     super.initState();
-    _allClientes = [];
     _clientesNotifier = ValueNotifier<List<ClienteModel>>([]);
     _initFormSearch();
     _loadData();
@@ -90,36 +95,35 @@ class _ClientesPageState extends State<ClientesPage> {
     );
   }
 
-  void _loadData({bool forceRefresh = false}) {
-    bloc.add(ClientesLoadEvent(forceRefresh: forceRefresh));
+  void _loadData({int? page}) {
+    if (page != null) _page = page;
+    bloc.add(ClientesLoadEvent(
+      query: _query.isEmpty ? null : _query,
+      page: _page,
+      size: _size,
+    ));
   }
 
   void _reload() {
     _isReloading.value = true;
-    _loadData(forceRefresh: true);
+    _loadData(page: 0);
   }
 
   void _search(String termo) {
     _buscaDebouncer.run(() {
-      final q = termo.toLowerCase();
-      final filtrados = _allClientes.where((c) {
-        final empresa = c.nomeEmpresa?.toLowerCase() ?? '';
-        final documento = c.documento?.toLowerCase() ?? '';
-        final email = c.email?.toLowerCase() ?? '';
-        final telefone = c.telefone?.toLowerCase() ?? '';
-        return empresa.contains(q) ||
-            documento.contains(q) ||
-            email.contains(q) ||
-            telefone.contains(q);
-      }).toList();
-      _clientesNotifier.value = filtrados;
+      _query = termo.trim();
+      _loadData(page: 0);
     });
   }
 
+  void _onPageChanged(int page) => _loadData(page: page);
+
   void _onChangeState(ClientesState state) {
     if (state is ClientesSuccessState) {
-      _allClientes = state.clientes;
-      _clientesNotifier.value = List.from(_allClientes);
+      _page = state.page.page;
+      _totalElements = state.page.totalElements;
+      _totalPages = state.page.totalPages;
+      _clientesNotifier.value = List.from(state.clientes);
       if (_isReloading.value) _isReloading.value = false;
     }
     if (state is ClientesErrorState && _isReloading.value) {
@@ -127,7 +131,7 @@ class _ClientesPageState extends State<ClientesPage> {
     }
     if (state is ClientesDeleteSuccessState) {
       showToastSuccess(message: 'Cliente excluído com sucesso');
-      _loadData(forceRefresh: true);
+      _loadData();
     }
   }
 
@@ -146,7 +150,7 @@ class _ClientesPageState extends State<ClientesPage> {
       barrierDismissible: false,
       builder: (_) => _cadastroDialog(cliente),
     );
-    if (salvo == true) _loadData(forceRefresh: true);
+    if (salvo == true) _loadData(page: 0);
   }
 
   void _onEditarCliente(ClienteModel cliente) {
@@ -203,7 +207,7 @@ class _ClientesPageState extends State<ClientesPage> {
   Widget _buildBlocBody(BuildContext context, ClientesState state) {
     if (state is ClientesLoadingState) return appLoadingCovertix();
     if (state is ClientesErrorState) {
-      return appError(state.errorModel, function: _loadData);
+      return appError(state.errorModel, function: () => _loadData());
     }
     return _clientesListBody();
   }
@@ -339,10 +343,14 @@ class _ClientesPageState extends State<ClientesPage> {
 
   Widget _table(List<ClienteModel> clientes) {
     return AppTable(
-      rowsPerPage: 30,
+      rowsPerPage: _size,
       headers: _tableHeaders(),
       itemCount: clientes.length,
       rowBuilder: (index) => _tableRow(clientes[index]),
+      page: _page,
+      totalElements: _totalElements,
+      totalPages: _totalPages <= 0 ? 1 : _totalPages,
+      onPageChanged: _onPageChanged,
     );
   }
 

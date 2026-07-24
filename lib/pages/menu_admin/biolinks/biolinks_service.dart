@@ -5,22 +5,28 @@ import 'package:web_gestor_site_covertix/core/cache/cache_keys.dart';
 import 'package:web_gestor_site_covertix/core/cache/page_data_cache.dart';
 import 'package:web_gestor_site_covertix/function/http_helper.dart';
 import 'package:web_gestor_site_covertix/models/biolink_model.dart';
+import 'package:web_gestor_site_covertix/models/page_response.dart';
 import 'package:web_gestor_site_covertix/services/biolink_service.dart';
 
-Future<List<BioLinkModel>> listarBioLinks({bool forceRefresh = false}) async {
-  if (!forceRefresh) {
-    final cached = await PageDataCache.getJsonList(CacheKeys.biolinks);
-    if (cached != null) {
-      return cached.map(BioLinkModel.fromMap).toList();
-    }
-  }
-  final response = await getBioLinks();
-  final list = jsonDecode(response.body) as List;
-  final maps = list
-      .map((item) => Map<String, dynamic>.from(item as Map))
-      .toList();
-  await PageDataCache.setJsonList(CacheKeys.biolinks, maps);
-  return maps.map(BioLinkModel.fromMap).toList();
+Future<PageResponse<BioLinkModel>> listarBioLinks({
+  int? id,
+  int page = 0,
+  int size = PageResponse.defaultSize,
+}) async {
+  final response = await getBioLinks(id: id, page: page, size: size);
+  return PageResponse.fromMap(
+    Map<String, dynamic>.from(jsonDecode(response.body) as Map),
+    BioLinkModel.fromMap,
+  );
+}
+
+Future<List<BioLinkModel>> listarBioLinksLookup({int? id}) async {
+  final page = await listarBioLinks(
+    id: id,
+    page: 0,
+    size: PageResponse.maxSize,
+  );
+  return page.content;
 }
 
 Future<BioLinkModel> criarBioLink(BioLinkModel biolink, {XFile? foto}) async {

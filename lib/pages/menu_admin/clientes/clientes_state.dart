@@ -1,5 +1,6 @@
 import 'package:muller_package/muller_package.dart';
 import 'package:web_gestor_site_covertix/models/cliente_model.dart';
+import 'package:web_gestor_site_covertix/models/page_response.dart';
 
 abstract class ClientesState {}
 
@@ -8,8 +9,10 @@ class ClientesInitialState extends ClientesState {}
 class ClientesLoadingState extends ClientesState {}
 
 class ClientesSuccessState extends ClientesState {
-  final List<ClienteModel> clientes;
-  ClientesSuccessState({required this.clientes});
+  final PageResponse<ClienteModel> page;
+  ClientesSuccessState({required this.page});
+
+  List<ClienteModel> get clientes => page.content;
 }
 
 class ClientesErrorState extends ClientesState {

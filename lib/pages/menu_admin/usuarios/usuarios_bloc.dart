@@ -9,8 +9,12 @@ class UsuariosBloc extends Bloc<UsuariosEvent, UsuariosState> {
     on<UsuariosLoadEvent>((event, emit) async {
       emit(UsuariosLoadingState());
       try {
-        final usuarios = await listarUsuariosAdmin(forceRefresh: event.forceRefresh);
-        emit(UsuariosSuccessState(usuarios: usuarios));
+        final page = await listarUsuariosAdmin(
+          query: event.query,
+          page: event.page,
+          size: event.size,
+        );
+        emit(UsuariosSuccessState(page: page));
       } catch (e) {
         emit(UsuariosErrorState(errorModel: parseApiError(e)));
       }

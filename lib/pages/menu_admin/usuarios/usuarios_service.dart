@@ -4,25 +4,39 @@ import 'package:web_gestor_site_covertix/app_config/const/app_endpoints.dart';
 import 'package:web_gestor_site_covertix/core/cache/cache_keys.dart';
 import 'package:web_gestor_site_covertix/core/cache/page_data_cache.dart';
 import 'package:web_gestor_site_covertix/function/http_helper.dart';
+import 'package:web_gestor_site_covertix/models/page_response.dart';
 import 'package:web_gestor_site_covertix/models/usuario_model.dart';
 import 'package:web_gestor_site_covertix/services/usuario_service.dart';
 
-Future<List<UsuarioModel>> listarUsuariosAdmin({
-  bool forceRefresh = false,
+Future<PageResponse<UsuarioModel>> listarUsuariosAdmin({
+  String? query,
+  bool? ativo,
+  int page = 0,
+  int size = PageResponse.defaultSize,
 }) async {
-  if (!forceRefresh) {
-    final cached = await PageDataCache.getJsonList(CacheKeys.usuarios);
-    if (cached != null) {
-      return cached.map(UsuarioModel.fromMap).toList();
-    }
-  }
-  final response = await getUsuarios();
-  final list = jsonDecode(response.body) as List;
-  final maps = list
-      .map((item) => Map<String, dynamic>.from(item as Map))
-      .toList();
-  await PageDataCache.setJsonList(CacheKeys.usuarios, maps);
-  return maps.map(UsuarioModel.fromMap).toList();
+  final response = await getUsuarios(
+    query: query,
+    ativo: ativo,
+    page: page,
+    size: size,
+  );
+  return PageResponse.fromMap(
+    Map<String, dynamic>.from(jsonDecode(response.body) as Map),
+    UsuarioModel.fromMap,
+  );
+}
+
+Future<List<UsuarioModel>> listarUsuariosLookup({
+  String? query,
+  bool? ativo,
+}) async {
+  final page = await listarUsuariosAdmin(
+    query: query,
+    ativo: ativo,
+    page: 0,
+    size: PageResponse.maxSize,
+  );
+  return page.content;
 }
 
 Future<UsuarioModel> criarUsuarioAdmin(

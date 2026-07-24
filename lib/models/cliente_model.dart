@@ -1,3 +1,5 @@
+import 'package:web_gestor_site_covertix/function/date_format.dart';
+
 class ClienteModel {
   int? id;
   String? nomeEmpresa;
@@ -36,8 +38,8 @@ class ClienteModel {
     email = json['email'];
     telefone = json['telefone'];
     foto = json['foto'];
-    createdAt = _parseDate(json['created_at']);
-    updatedAt = _parseDate(json['updated_at']);
+    createdAt = parseApiDateTime(json['created_at']);
+    updatedAt = parseApiDateTime(json['updated_at']);
   }
   Map<String, dynamic> toJsonCadastro() {
     return {
@@ -47,10 +49,5 @@ class ClienteModel {
       'senha': senha ?? '',
       'telefone': telefone ?? '',
     };
-  }
-
-  static DateTime? _parseDate(dynamic value) {
-    if (value == null || value.toString().isEmpty) return null;
-    return DateTime.tryParse(value.toString());
   }
 }

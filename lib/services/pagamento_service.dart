@@ -30,8 +30,17 @@ Future<AppResponse> getPagamentosUltimos() async {
   return getJson(endpoint: AppEndpoints.endpointPagamentosUltimos);
 }
 
-Future<AppResponse> getPagamentosHistorico() async {
-  return getJson(endpoint: AppEndpoints.endpointPagamentosHistorico);
+Future<AppResponse> getPagamentosHistorico({
+  int page = 0,
+  int size = 30,
+}) async {
+  return getJson(
+    endpoint: AppEndpoints.endpointPagamentosHistorico,
+    parameters: {
+      'page': page.toString(),
+      'size': size.toString(),
+    },
+  );
 }
 
 Future<AppResponse> getPagamentoById(int id) async {

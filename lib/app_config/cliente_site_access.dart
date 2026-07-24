@@ -2,10 +2,9 @@ import 'package:web_gestor_site_covertix/pages/menu_admin/sites/sites_service.da
 
 Future<Set<String>> obterTiposSiteDoCliente() async {
   try {
-    final sites = await listarSites();
+    final sites = await listarSitesLookup();
     return sites.map((s) => s.tipo).whereType<String>().toSet();
   } catch (_) {
     return {};
   }
 }
-

@@ -6,6 +6,7 @@ import 'package:web_gestor_site_covertix/app_config/const/app_theme.dart';
 import 'package:web_gestor_site_covertix/app_config/const/covertix_colors.dart';
 import 'package:web_gestor_site_covertix/function/app_toast.dart';
 import 'package:web_gestor_site_covertix/function/debounce.dart';
+import 'package:web_gestor_site_covertix/models/page_response.dart';
 import 'package:web_gestor_site_covertix/models/usuario_model.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/usuarios/usuarios_bloc.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/usuarios/usuarios_cadastro.dart';
@@ -30,10 +31,15 @@ class _UsuariosPageState extends State<UsuariosPage> {
   final UsuariosBloc bloc = UsuariosBloc();
 
   late AppFormField _formSearch;
-  late List<UsuarioModel> _allUsuarios;
   late ValueNotifier<List<UsuarioModel>> _usuariosNotifier;
   final ValueNotifier<bool> _isReloading = ValueNotifier(false);
   final Debouncer _buscaDebouncer = Debouncer();
+
+  int _page = 0;
+  int _totalElements = 0;
+  int _totalPages = 0;
+  String _query = '';
+  static const _size = PageResponse.defaultSize;
 
   static const _fotoFlex = 0.25;
   static const _emailFlex = 0.7;
@@ -44,7 +50,6 @@ class _UsuariosPageState extends State<UsuariosPage> {
   @override
   void initState() {
     super.initState();
-    _allUsuarios = [];
     _usuariosNotifier = ValueNotifier<List<UsuarioModel>>([]);
     _initFormSearch();
     _loadData();
@@ -89,32 +94,35 @@ class _UsuariosPageState extends State<UsuariosPage> {
     );
   }
 
-  void _loadData({bool forceRefresh = false}) {
-    bloc.add(UsuariosLoadEvent(forceRefresh: forceRefresh));
+  void _loadData({int? page}) {
+    if (page != null) _page = page;
+    bloc.add(UsuariosLoadEvent(
+      query: _query.isEmpty ? null : _query,
+      page: _page,
+      size: _size,
+    ));
   }
 
   void _reload() {
     _isReloading.value = true;
-    _loadData(forceRefresh: true);
+    _loadData(page: 0);
   }
 
   void _search(String termo) {
     _buscaDebouncer.run(() {
-      final q = termo.toLowerCase();
-      final filtrados = _allUsuarios.where((u) {
-        final nome = u.nome?.toLowerCase() ?? '';
-        final email = u.email?.toLowerCase() ?? '';
-        final tipo = u.tipo?.toLowerCase() ?? '';
-        return nome.contains(q) || email.contains(q) || tipo.contains(q);
-      }).toList();
-      _usuariosNotifier.value = filtrados;
+      _query = termo.trim();
+      _loadData(page: 0);
     });
   }
 
+  void _onPageChanged(int page) => _loadData(page: page);
+
   void _onChangeState(UsuariosState state) {
     if (state is UsuariosSuccessState) {
-      _allUsuarios = state.usuarios;
-      _usuariosNotifier.value = List.from(_allUsuarios);
+      _page = state.page.page;
+      _totalElements = state.page.totalElements;
+      _totalPages = state.page.totalPages;
+      _usuariosNotifier.value = List.from(state.usuarios);
       if (_isReloading.value) _isReloading.value = false;
     }
     if (state is UsuariosErrorState && _isReloading.value) {
@@ -122,7 +130,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
     }
     if (state is UsuariosDeleteSuccessState) {
       showToastSuccess(message: 'Usuário excluído com sucesso');
-      _loadData(forceRefresh: true);
+      _loadData();
     }
   }
 
@@ -134,7 +142,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
       barrierDismissible: false,
       builder: (_) => _cadastroDialog(usuario),
     );
-    if (salvo == true) _loadData(forceRefresh: true);
+    if (salvo == true) _loadData(page: 0);
   }
 
   void _onEditarUsuario(UsuarioModel usuario) {
@@ -191,7 +199,7 @@ class _UsuariosPageState extends State<UsuariosPage> {
   Widget _buildBlocBody(BuildContext context, UsuariosState state) {
     if (state is UsuariosLoadingState) return appLoadingCovertix();
     if (state is UsuariosErrorState) {
-      return appError(state.errorModel, function: _loadData);
+      return appError(state.errorModel, function: () => _loadData());
     }
     return _usuariosListBody();
   }
@@ -327,10 +335,14 @@ class _UsuariosPageState extends State<UsuariosPage> {
 
   Widget _table(List<UsuarioModel> usuarios) {
     return AppTable(
-      rowsPerPage: 30,
+      rowsPerPage: _size,
       headers: _tableHeaders(),
       itemCount: usuarios.length,
       rowBuilder: (index) => _tableRow(usuarios[index]),
+      page: _page,
+      totalElements: _totalElements,
+      totalPages: _totalPages <= 0 ? 1 : _totalPages,
+      onPageChanged: _onPageChanged,
     );
   }
 

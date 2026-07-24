@@ -9,6 +9,7 @@ import 'package:web_gestor_site_covertix/function/app_toast.dart';
 import 'package:web_gestor_site_covertix/function/debounce.dart';
 import 'package:web_gestor_site_covertix/function/link_helper.dart';
 import 'package:web_gestor_site_covertix/models/app_enums.dart';
+import 'package:web_gestor_site_covertix/models/page_response.dart';
 import 'package:web_gestor_site_covertix/models/site_model.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/sites/sites_bloc.dart';
 import 'package:web_gestor_site_covertix/pages/menu_admin/sites/sites_cadastro.dart';
@@ -41,7 +42,7 @@ class _SitesPageState extends State<SitesPage> {
   final SitesBloc bloc = SitesBloc();
 
   late AppFormField _formSearch;
-  late List<SiteModel> _allSites;
+  late List<SiteModel> _pageItems;
   late ValueNotifier<List<SiteModel>> _sitesNotifier;
   final ValueNotifier<bool> _isAdminNotifier = ValueNotifier(false);
   final ValueNotifier<int?> _clienteIdLogadoNotifier = ValueNotifier(null);
@@ -52,6 +53,11 @@ class _SitesPageState extends State<SitesPage> {
   final ValueNotifier<String?> _filtroDominio = ValueNotifier(null);
   final Debouncer _buscaDebouncer = Debouncer();
   String _busca = '';
+
+  int _page = 0;
+  int _totalElements = 0;
+  int _totalPages = 0;
+  static const _size = PageResponse.defaultSize;
 
   String get _titulo => widget.tituloPagina ?? 'Sites';
   bool get _tipoFixo =>
@@ -77,7 +83,7 @@ class _SitesPageState extends State<SitesPage> {
   @override
   void initState() {
     super.initState();
-    _allSites = [];
+    _pageItems = [];
     _sitesNotifier = ValueNotifier<List<SiteModel>>([]);
     _initFormSearch();
     _carregarUsuario();
@@ -135,21 +141,28 @@ class _SitesPageState extends State<SitesPage> {
     return sites.where((s) => s.tipo == tipo).toList();
   }
 
-  void _loadData({bool forceRefresh = false}) {
-    bloc.add(SitesLoadEvent(forceRefresh: forceRefresh));
+  void _loadData({int? page}) {
+    if (page != null) _page = page;
+    bloc.add(SitesLoadEvent(
+      query: _busca.isEmpty ? null : _busca,
+      page: _page,
+      size: _size,
+    ));
   }
 
   void _reload() {
     _isReloading.value = true;
-    _loadData(forceRefresh: true);
+    _loadData(page: 0);
   }
 
   void _onBusca(String termo) {
     _buscaDebouncer.run(() {
-      _busca = termo.trim().toLowerCase();
-      _aplicarFiltros();
+      _busca = termo.trim();
+      _loadData(page: 0);
     });
   }
+
+  void _onPageChanged(int page) => _loadData(page: page);
 
   void _aplicarFiltros() {
     final status = _filtroStatus.value;
@@ -157,7 +170,7 @@ class _SitesPageState extends State<SitesPage> {
     final situacao = _filtroSituacaoAssinatura.value;
     final dominioFiltro = _filtroDominio.value;
 
-    _sitesNotifier.value = _allSites.where((s) {
+    _sitesNotifier.value = _pageItems.where((s) {
       if (status != null && s.status != status) return false;
       if (!_tipoFixo && tipo != null && s.tipo != tipo) return false;
       if (situacao != null &&
@@ -174,37 +187,16 @@ class _SitesPageState extends State<SitesPage> {
           s.dominio!.trim().isNotEmpty) {
         return false;
       }
-      if (_busca.isNotEmpty) {
-        final id = s.id?.toString() ?? '';
-        final nome = s.nome?.toLowerCase() ?? '';
-        final cliente = s.clienteNomeEmpresa?.toLowerCase() ?? '';
-        final tipoLabel = SiteModel.labelTipo(s.tipo).toLowerCase();
-        final dominio = s.dominio?.toLowerCase() ?? '';
-        final subdominio = s.subdominio?.toLowerCase() ?? '';
-        final statusLabel = SiteModel.labelStatus(s.status).toLowerCase();
-        final situacaoLabel =
-            SiteModel.labelSituacaoAssinatura(s.situacaoAssinatura)
-                .toLowerCase();
-        final url = _urlSite(s)?.toLowerCase() ?? '';
-        if (!(id.contains(_busca) ||
-            nome.contains(_busca) ||
-            cliente.contains(_busca) ||
-            tipoLabel.contains(_busca) ||
-            dominio.contains(_busca) ||
-            subdominio.contains(_busca) ||
-            statusLabel.contains(_busca) ||
-            situacaoLabel.contains(_busca) ||
-            url.contains(_busca))) {
-          return false;
-        }
-      }
       return true;
     }).toList();
   }
 
   void _onChangeState(SitesState state) {
     if (state is SitesSuccessState) {
-      _allSites = _filtrarPorTipoPagina(state.sites);
+      _page = state.page.page;
+      _totalElements = state.page.totalElements;
+      _totalPages = state.page.totalPages;
+      _pageItems = _filtrarPorTipoPagina(state.sites);
       _aplicarFiltros();
       if (_isReloading.value) _isReloading.value = false;
     }
@@ -213,7 +205,7 @@ class _SitesPageState extends State<SitesPage> {
     }
     if (state is SitesDeleteSuccessState) {
       showToastSuccess(message: 'Site excluído com sucesso');
-      _loadData(forceRefresh: true);
+      _loadData();
     }
   }
 
@@ -241,7 +233,7 @@ class _SitesPageState extends State<SitesPage> {
       barrierDismissible: false,
       builder: (_) => _cadastroDialog(siteInicial),
     );
-    if (salvo == true) _loadData(forceRefresh: true);
+    if (salvo == true) _loadData(page: 0);
   }
 
   String? _urlSite(SiteModel site) {
@@ -320,7 +312,7 @@ class _SitesPageState extends State<SitesPage> {
   Widget _buildBlocBody(BuildContext context, SitesState state) {
     if (state is SitesLoadingState) return appLoadingCovertix();
     if (state is SitesErrorState) {
-      return appError(state.errorModel, function: _loadData);
+      return appError(state.errorModel, function: () => _loadData());
     }
     return _sitesListBody();
   }
@@ -582,10 +574,14 @@ class _SitesPageState extends State<SitesPage> {
 
   Widget _table(List<SiteModel> sites, bool isAdmin) {
     return AppTable(
-      rowsPerPage: 30,
+      rowsPerPage: _size,
       headers: _tableHeaders(isAdmin),
       itemCount: sites.length,
       rowBuilder: (index) => _tableRow(sites[index], isAdmin),
+      page: _page,
+      totalElements: _totalElements,
+      totalPages: _totalPages <= 0 ? 1 : _totalPages,
+      onPageChanged: _onPageChanged,
     );
   }
 
